@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="auto">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TOMツールポータル｜TOMゼロイチラボ</title>
+  <meta name="color-scheme" content="light dark">
+  <style>
+    /* ==========================
+       TOM ツールポータル v1.0
+       - 単一HTMLで完結 / WP・GitHub対応
+       - 検索/カテゴリ/タグ/並び替え/お気に入り/最近/Pro区分
+       - ダーク/ライト/自動切替・ローカル保存・JSON入出力
+       ========================== */
+
+    :root{
+      --bg:#f8fafc; --card:#ffffff; --ink:#0f172a; --muted:#475569; --line:#e2e8f0;
+      --key:#2563eb; --ok:#16a34a; --warn:#d97706; --danger:#dc2626; --pro:#c026d3;
+      --chip:#eef2f7; --radius:14px; --shadow:0 6px 18px rgba(2,6,23,.08); --shadow-sm:0 2px 8px rgba(2,6,23,.06);
+      --fs:16px; --trans:.18s ease;
+    }
+    @media (prefers-color-scheme: dark){
+      html[data-theme="auto"]{
+        --bg:#0b1220; --card:#0f172a; --ink:#e2e8f0; --muted:#cbd5e1; --line:#1f2937; --chip:#0b1324; --shadow:0 8px 24px rgba(0,0,0,.35); --shadow-sm:0 2px 10px rgba(0,0,0,.3);
+      }
+    }
+    html[data-theme="dark"]{
+      --bg:#0b1220; --card:#0f172a; --ink:#e2e8f0; --muted:#cbd5e1; --line:#1f2937; --chip:#0b1324; --shadow:0 8px 24px rgba(0,0,0,.35); --shadow-sm:0 2px 10px rgba(0,0,0,.3);
+    }
+
+    *{box-sizing:border-box} html,body{margin:0;padding:0}
+    body{font:400 var(--fs)/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans JP","Hiragino Sans","Yu Gothic UI","YuGothic",Meiryo,sans-serif; background:var(--bg); color:var(--ink)}
+    a{color:inherit; text-decoration:none}
+
+    .wrap{max-width:1200px; margin:0 auto; padding:18px}
+
+    /* Header */
+    header{position:sticky; top:0; z-index:20; backdrop-filter:saturate(140%) blur(6px); background:color-mix(in oklab, var(--bg) 75%, transparent); border-bottom:1px solid var(--line)}
+    .head{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 18px}
+    .brand{display:flex; align-items:center; gap:12px}
+    .logo{width:36px;height:36px;display:grid;place-items:center;border-radius:12px;background:conic-gradient(from 180deg, #60a5fa, #2563eb 40%, #1d4ed8 60%, #60a5fa); box-shadow:var(--shadow-sm)}
+    .logo svg{filter:drop-shadow(0 2px 4px rgba(0,0,0,.25))}
+    .title{font-weight:800; letter-spacing:.2px}
+    .sub{font-size:12px; color:var(--muted)}
+
+    .head-actions{display:flex; gap:8px; align-items:center}
+    .btn{display:inline-flex; align-items:center; gap:8px; padding:9px 12px; background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow-sm); cursor:pointer; transition:transform var(--trans), background var(--trans), border-color var(--trans)}
+    .btn:hover{transform:translateY(-1px)}
+    .btn.primary{background:var(--key); color:#fff; border-color:color-mix(in oklab, var(--key), black 12%)}
+    .btn.ghost{background:transparent}
+    .btn.small{padding:6px 10px; border-radius:10px}
+    .btn.icon{padding:8px}
+
+    /* Controls */
+    .controls{display:grid; gap:12px; grid-template-columns:1fr; padding:12px 18px}
+    .searchbar{display:flex; gap:10px}
+    .searchwrap{position:relative; flex:1}
+    .searchwrap input{width:100%; padding:14px 14px 14px 42px; border-radius:14px; border:1px solid var(--line); background:var(--card); color:var(--ink); box-shadow:var(--shadow-sm)}
+    .searchwrap svg{position:absolute; left:12px; top:50%; transform:translateY(-50%); opacity:.6}
+
+    .bar{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+    .select{padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:var(--card); color:var(--ink); box-shadow:var(--shadow-sm)}
+
+    .filters{display:flex; flex-wrap:wrap; gap:8px}
+    .chip{display:inline-flex; align-items:center; gap:6px; padding:8px 10px; border-radius:999px; background:var(--chip); color:var(--ink); border:1px solid var(--line); cursor:pointer; user-select:none}
+    .chip.active{outline:2px solid color-mix(in oklab, var(--key), white 25%)}
+    .chip .dot{width:8px;height:8px;border-radius:50%}
+
+    /* Grid */
+    .grid{display:grid; gap:14px; grid-template-columns:repeat(1, minmax(0, 1fr))}
+    @media (min-width:700px){ .grid{grid-template-columns:repeat(2, minmax(0, 1fr))} }
+    @media (min-width:1024px){ .grid{grid-template-columns:repeat(3, minmax(0, 1fr))} }
+
+    /* Card */
+    .card{position:relative; background:var(--card); border:1px solid var(--line); border-radius:16px; padding:14px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:12px}
+    .card h3{margin:0; font-size:18px}
+    .meta{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+    .badge{font-size:12px; padding:4px 8px; border-radius:999px; border:1px solid var(--line); background:var(--chip)}
+    .badge.pro{background:color-mix(in oklab, var(--pro) 18%, var(--chip)); border-color:color-mix(in oklab, var(--pro), white 60%); color:color-mix(in oklab, var(--pro), white 20%); font-weight:700}
+    .tags{display:flex; flex-wrap:wrap; gap:6px}
+    .tag{font-size:12px; padding:4px 8px; border-radius:8px; border:1px dashed var(--line); color:var(--muted)}
+    .desc{color:var(--muted); font-size:14px}
+    .card .actions{display:flex; gap:8px; flex-wrap:wrap}
+    .card .actions .btn{flex:none}
+    .fav{position:absolute; right:10px; top:10px; border:none; background:transparent; cursor:pointer; opacity:.8}
+    .fav svg{display:block}
+    .fav.active svg{fill:#f59e0b}
+    .corner{position:absolute; left:-1px; top:-1px; padding:4px 8px; border-bottom-right-radius:10px; border:1px solid var(--line); background:linear-gradient(135deg, #e0f2fe, #f5f3ff)}
+
+    /* Empty */
+    .empty{padding:28px; text-align:center; color:var(--muted); border:1px dashed var(--line); border-radius:16px}
+
+    /* Footer */
+    footer{padding:24px 18px; color:var(--muted)}
+
+    /* Modal */
+    .modal{position:fixed; inset:0; display:none; place-items:center; background:rgba(2,6,23,.5)}
+    .modal.open{display:grid}
+    .dialog{width:min(860px, 96vw); max-height:90vh; overflow:auto; background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow); padding:18px}
+    .form{display:grid; gap:12px; grid-template-columns:1fr}
+    .row{display:grid; gap:8px}
+    .row.cols{grid-template-columns:1fr 1fr; gap:12px}
+    .row label{font-size:12px; color:var(--muted)}
+    .row input, .row textarea, .row select{width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:var(--card); color:var(--ink)}
+    .row textarea{min-height:88px; resize:vertical}
+
+    .hl{font-weight:700; color:var(--ink)}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="head wrap">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg"><path d="M7 11c0-3.866 3.134-7 7-7a7 7 0 1 1-7 7Z" opacity=".75"/><path d="M5 19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-.5a5.5 5.5 0 1 0-14 0V19Z"/></svg>
+        </div>
+        <div>
+          <div class="title">TOMツールポータル</div>
+          <div class="sub">ゼロからイチへ。ラボの資産を一ヶ所に。</div>
+        </div>
+      </div>
+      <div class="head-actions">
+        <button class="btn small" id="btn-help">使い方</button>
+        <button class="btn small" id="btn-import">インポート</button>
+        <button class="btn small" id="btn-export">エクスポート</button>
+        <select class="select" id="themeSel" aria-label="テーマ">
+          <option value="auto">テーマ: 自動</option>
+          <option value="light">テーマ: ライト</option>
+          <option value="dark">テーマ: ダーク</option>
+        </select>
+        <button class="btn primary" id="btn-new">＋ ツール追加</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- Controls -->
+    <section class="controls">
+      <div class="searchbar">
+        <div class="searchwrap">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15.5 14h-.8l-.3-.3a6.5 6.5 0 1 0-.7.7l.3.3v.8l5 5 1.5-1.5-5-5Zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14Z"/></svg>
+          <input id="q" placeholder="検索（タイトル・説明・タグ）」" autocomplete="off" />
+        </div>
+        <select id="viewSel" class="select">
+          <option value="all">すべて</option>
+          <option value="fav">お気に入り</option>
+          <option value="recent">最近使った</option>
+        </select>
+        <select id="sortSel" class="select">
+          <option value="recent">並び: 最近更新</option>
+          <option value="name">並び: 名前</option>
+          <option value="popular">並び: よく使う</option>
+          <option value="new">並び: 新着</option>
+        </select>
+      </div>
+      <div class="bar">
+        <span class="sub">カテゴリ:</span>
+        <div class="filters" id="catChips"></div>
+      </div>
+      <div class="bar">
+        <span class="sub">タグ:</span>
+        <div class="filters" id="tagChips"></div>
+      </div>
+    </section>
+
+    <!-- Grid -->
+    <section id="grid" class="grid" aria-live="polite"></section>
+
+    <div id="empty" class="empty" style="display:none">該当するツールがありません。フィルタを変更するか、<span class="hl">ツール追加</span>してください。</div>
+  </main>
+
+  <footer class="wrap">
+    <div>ローカル保存: 自動／<button class="btn small" id="btn-reset">初期化</button></div>
+    <div style="margin-top:8px; font-size:12px">v1.0 – 単一HTML（WP/静的サイトOK）／ショートカット: <span class="badge">/</span> 検索、<span class="badge">f</span> お気に入り表示切替</div>
+  </footer>
+
+  <!-- Modals -->
+  <div class="modal" id="modal-edit" aria-hidden="true">
+    <div class="dialog">
+      <h2 style="margin:0 0 10px">ツール編集 <span id="editMode" class="badge">新規</span></h2>
+      <form class="form" id="editForm">
+        <div class="row cols">
+          <div class="row"><label>タイトル</label><input name="title" required></div>
+          <div class="row"><label>カテゴリ</label>
+            <select name="category" required>
+              <option>FX</option><option>MNP</option><option>診断</option><option>管理</option><option>アカウント</option><option>物販</option><option>サロン</option><option>その他</option>
+            </select>
+          </div>
+        </div>
+        <div class="row"><label>説明</label><textarea name="desc" placeholder="用途や使い方を短く"></textarea></div>
+        <div class="row cols">
+          <div class="row"><label>メインURL</label><input name="main"></div>
+          <div class="row"><label>WordPress URL</label><input name="wp"></div>
+        </div>
+        <div class="row cols">
+          <div class="row"><label>GitHub URL</label><input name="gh"></div>
+          <div class="row"><label>タグ（カンマ区切り）</label><input name="tags" placeholder="例: lot,calc,usdtry"></div>
+        </div>
+        <div class="row cols">
+          <div class="row"><label><input type="checkbox" name="pro"> Pro限定</label></div>
+          <div class="row"><label><input type="checkbox" name="favorite"> お気に入り</label></div>
+        </div>
+        <div class="row" style="display:flex; gap:8px; justify-content:flex-end">
+          <button type="button" class="btn" id="btn-cancel">キャンセル</button>
+          <button type="submit" class="btn primary">保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="modal-help" aria-hidden="true">
+    <div class="dialog">
+      <h2 style="margin:0 0 10px">使い方</h2>
+      <ol style="margin:0 0 12px 18px; padding:0 0 0 8px">
+        <li>検索バーでタイトル・説明・タグを横断検索。<span class="badge">/</span> キーでフォーカス。</li>
+        <li>カテゴリとタグのチップをクリックでフィルタ。複数選択可。</li>
+        <li>カードの★でお気に入り。上部の表示切替で「お気に入り」「最近」を切り替え。</li>
+        <li>「＋ ツール追加」から自分のツールを登録。URLは空でもOK。</li>
+        <li>右上のインポート/エクスポートでJSON入出力。環境間の同期にどうぞ。</li>
+        <li>テーマは「自動/ライト/ダーク」。設定・データは自動で保存されます。</li>
+      </ol>
+      <div style="text-align:right"><button class="btn" id="btn-help-close">閉じる</button></div>
+    </div>
+  </div>
+
+  <input id="fileInput" type="file" accept="application/json" style="display:none" />
+
+  <script>
+  ;(() => {
+    const LS_KEY = 'tom-tool-portal-v1';
+
+    /** 初期データ（必要に応じてURLを差し替えてください） */
+    const initialTools = [
+      t('FX収益シミュレーター', 'FX', '資金/ロット/複利シミュレーション', ['fx','sim','lot'], {main:'#', wp:'#', gh:'#'}),
+      t('2社間ボーナス最適化', 'FX', 'USD/JPY両モード。最大ボーナス配分と必要入金を最適化', ['bonus','hedge'], {main:'#'}),
+      t('ゴトー日カウントダウン', 'FX', 'JST 9:55前後のリマインドと一括登録', ['gtd','fix'], {main:'#'}),
+      t('TIS指標カレンダー', 'FX', '週/日タイムライン・絞り込み・ピン留め', ['calendar','macro'], {main:'#'}),
+      t('TOM BOSH SYSTEM Console', 'FX', 'ボーナスアービトラージ半自動コンソール', ['arbi','console'], {main:'#'}, true),
+      t('TOM FOCUS TRADE（ゴトー日EA）', 'FX', '9:55短期/安値ロングモード/トレール/ナンピン', ['ea','usdjp y'], {main:'#'}, true),
+      t('ボーナスアービトラージ・マニュアル', 'FX', '2口座ヘッジ/強制LC検知→反対側一括決済', ['manual'], {main:'#'}),
+
+      t('MNP乗り換えチェックツール', 'MNP', 'キャリア条件・保有期限・並び替えモーダル', ['mnp','checker'], {main:'#'}),
+
+      t('目標逆算プランナー', '診断', '「月+10万」から週次タスクを逆算。ダーク/ライト対応', ['plan','kpi'], {main:'#'}),
+      t('副業適性診断', '診断', 'FX/物販/MNP/EAなどの適性を診断', ['diagnosis'], {main:'#'}),
+
+      t('タスク管理ツール（Apps Script）', '管理', '一覧＋＋から登録/メンバー/強制スキャン', ['gapps','todo'], {main:'#'}),
+      t('収益KPIダッシュボード', '管理', 'カテゴリ別勝率/カード追加/クイック入力', ['kpi','dashboard'], {main:'#'}),
+
+      t('複垢管理ツール', 'アカウント', 'プロファイルの一括管理・マスク機能', ['account','multi'], {main:'#'}),
+      t('複垢ジェネレーター', 'アカウント', '姓入力→名を自動生成。重複防止', ['generator'], {main:'#'}),
+
+      t('買取仕入れ計算ツール', '物販', '割引/ポイント/クーポン対応。利益率算出', ['calc','retail'], {main:'#'}),
+      t('ポケカ管理ツール', '物販', 'レアリティ/販売ステータス/ダッシュボード', ['pokemon','card'], {main:'#'}),
+      t('抽選管理ツール', '物販', '抽選期限/引換期限の直近表示・履歴', ['lottery'], {main:'#'}),
+
+      t('サロン投稿ツール', 'サロン', 'URLや画像から応募情報を抽出して投稿フォーマット化', ['salon','post'], {main:'#'}),
+      t('投稿フォーマット変換ツール', 'サロン', '締切/引換期限/応募先の整形出力', ['formatter'], {main:'#'}),
+
+      t('TikTok Lite管理ツール', 'その他', '親子端末の相関図/QR管理/チェックイン除外', ['tiktok','graph'], {main:'#'}),
+      t('セットリスト管理', 'その他', '曲リスト/再生/タイマー/テーマ切替', ['music','setlist'], {main:'#'}),
+    ];
+
+    function t(title, category, desc, tags=[], links={}, pro=false){
+      return { id: crypto.randomUUID(), title, category, desc, tags, links, pro,
+        createdAt: Date.now() - Math.floor(Math.random()*30)*86400000, updatedAt: Date.now(), usageCount: 0, lastUsed: 0, favorite: false };
+    }
+
+    /** 状態 */
+    let state = loadState();
+    if(!state){
+      state = { tools: initialTools, prefs: { theme: 'auto', view: 'all', sort: 'recent', cats: [], tags: [] } };
+      saveState();
+    }
+
+    // DOM
+    const q = document.getElementById('q');
+    const grid = document.getElementById('grid');
+    const empty = document.getElementById('empty');
+    const viewSel = document.getElementById('viewSel');
+    const sortSel = document.getElementById('sortSel');
+    const themeSel = document.getElementById('themeSel');
+    const catChips = document.getElementById('catChips');
+    const tagChips = document.getElementById('tagChips');
+
+    // Prefs 初期表示
+    themeSel.value = (state.prefs.theme||'auto');
+    document.documentElement.setAttribute('data-theme', themeSel.value);
+    viewSel.value = state.prefs.view || 'all';
+    sortSel.value = state.prefs.sort || 'recent';
+
+    /** イベント */
+    themeSel.onchange = () => { document.documentElement.setAttribute('data-theme', themeSel.value); state.prefs.theme = themeSel.value; saveState(); };
+    viewSel.onchange = () => { state.prefs.view = viewSel.value; saveState(); render(); };
+    sortSel.onchange = () => { state.prefs.sort = sortSel.value; saveState(); render(); };
+    q.oninput = debounce(() => render(), 120);
+
+    document.getElementById('btn-new').onclick = () => openEdit();
+    document.getElementById('btn-help').onclick = () => toggleModal('modal-help', true);
+    document.getElementById('btn-help-close').onclick = () => toggleModal('modal-help', false);
+    document.getElementById('btn-import').onclick = () => document.getElementById('fileInput').click();
+    document.getElementById('btn-export').onclick = exportJSON;
+    document.getElementById('btn-reset').onclick = () => { if(confirm('ポータルを初期化します。よろしいですか？')){ localStorage.removeItem(LS_KEY); location.reload(); } };
+
+    document.getElementById('fileInput').addEventListener('change', async (e) => {
+      const file = e.target.files?.[0]; if(!file) return;
+      const text = await file.text();
+      try{
+        const data = JSON.parse(text);
+        if(!Array.isArray(data.tools)) throw new Error('フォーマット不正');
+        state.tools = normalizeImport(data.tools);
+        state.prefs = Object.assign({ theme:'auto', view:'all', sort:'recent', cats:[], tags:[] }, data.prefs||{});
+        saveState();
+        themeSel.value = state.prefs.theme; document.documentElement.setAttribute('data-theme', themeSel.value);
+        viewSel.value = state.prefs.view; sortSel.value = state.prefs.sort;
+        refreshChips(); render();
+        alert('インポート完了');
+      }catch(err){ alert('読み込みに失敗しました: '+ err.message); }
+      e.target.value = '';
+    });
+
+    // キーボード: / で検索, f でお気に入りビュー切替
+    window.addEventListener('keydown', (ev) => {
+      if(ev.key === '/' && document.activeElement !== q){ ev.preventDefault(); q.focus(); }
+      if(ev.key.toLowerCase() === 'f' && !/input|textarea|select/i.test(document.activeElement.tagName)){
+        viewSel.value = (viewSel.value === 'fav' ? 'all' : 'fav'); viewSel.onchange();
+      }
+    });
+
+    // Chips 初期化
+    refreshChips();
+
+    // 初回描画
+    render();
+
+    /*** 関数群 ***/
+    function refreshChips(){
+      const cats = [...new Set(state.tools.map(t=>t.category))].sort();
+      catChips.innerHTML = cats.map(c => chipHTML(c, state.prefs.cats.includes(c))).join('');
+      catChips.querySelectorAll('.chip').forEach(el => el.onclick = () => { toggleSelect(state.prefs.cats, el.dataset.val); render(); });
+
+      const tagSet = new Set(); state.tools.forEach(t => t.tags?.forEach(x => tagSet.add(x)));
+      const tags = [...tagSet].sort();
+      tagChips.innerHTML = tags.map(tg => chipHTML('#'+tg, state.prefs.tags.includes(tg), tg)).join('');
+      tagChips.querySelectorAll('.chip').forEach(el => el.onclick = () => { toggleSelect(state.prefs.tags, el.dataset.val); render(); });
+    }
+
+    function chipHTML(label, active=false, raw){
+      const val = raw || label; const show = raw ? label : label;
+      const dot = `<span class="dot" style="background:${labelColor(label)}"></span>`;
+      return `<span class="chip ${active?'active':''}" data-val="${escapeHTML(raw||label)}">${dot}${escapeHTML(show)}</span>`;
+    }
+
+    function labelColor(label){
+      const map = { FX:'#2563eb', MNP:'#d97706', 診断:'#0ea5a4', 管理:'#6366f1', アカウント:'#e11d48', 物販:'#16a34a', サロン:'#c026d3', その他:'#334155' };
+      return map[label] || '#94a3b8';
+    }
+
+    function render(){
+      saveState();
+      const qv = (q.value || '').trim().toLowerCase();
+      const cats = state.prefs.cats || []; const tags = state.prefs.tags || [];
+
+      let list = [...state.tools];
+
+      // view filter
+      if(viewSel.value === 'fav') list = list.filter(x => !!x.favorite);
+      if(viewSel.value === 'recent') list = list.filter(x => x.lastUsed).sort((a,b) => b.lastUsed - a.lastUsed).slice(0, 18);
+
+      // query filter
+      if(qv){
+        list = list.filter(x => [x.title, x.desc, (x.tags||[]).join(' ')].join(' ').toLowerCase().includes(qv));
+      }
+
+      // category & tag filter
+      if(cats.length) list = list.filter(x => cats.includes(x.category));
+      if(tags.length) list = list.filter(x => (x.tags||[]).some(tg => tags.includes(tg)));
+
+      // sort
+      list.sort((a,b) => sortCompare(a,b,state.prefs.sort));
+
+      grid.innerHTML = list.map(cardHTML).join('');
+      grid.querySelectorAll('.fav').forEach(btn => btn.onclick = onFavClick);
+      grid.querySelectorAll('.open-main').forEach(a => a.onclick = onOpenMain);
+      grid.querySelectorAll('.open-edit').forEach(b => b.onclick = () => openEdit(b.dataset.id));
+      grid.querySelectorAll('.open-del').forEach(b => b.onclick = () => delTool(b.dataset.id));
+
+      empty.style.display = list.length ? 'none' : 'block';
+    }
+
+    function sortCompare(a,b,mode){
+      if(mode === 'name') return a.title.localeCompare(b.title, 'ja');
+      if(mode === 'popular') return (b.usageCount||0) - (a.usageCount||0);
+      if(mode === 'new') return (b.createdAt||0) - (a.createdAt||0);
+      return (b.updatedAt||0) - (a.updatedAt||0); // recent
+    }
+
+    function cardHTML(x){
+      const catColor = labelColor(x.category);
+      const pro = x.pro ? '<span class="badge pro">PRO</span>' : '';
+      const newFlag = (Date.now() - (x.createdAt||0) < 14*86400000) ? '<span class="corner">NEW</span>' : '';
+      const tags = (x.tags||[]).map(t => `<span class="tag">#${escapeHTML(t)}</span>`).join('');
+      const links = [
+        x.links?.main ? `<a class="btn open-main" href="${escapeAttr(x.links.main)}" target="_blank" rel="noopener" aria-label="開く">開く</a>` : '',
+        x.links?.wp ? `<a class="btn" href="${escapeAttr(x.links.wp)}" target="_blank" rel="noopener">WP</a>` : '',
+        x.links?.gh ? `<a class="btn" href="${escapeAttr(x.links.gh)}" target="_blank" rel="noopener">GitHub</a>` : ''
+      ].join('');
+
+      return `<article class="card" data-id="${x.id}">
+        ${newFlag}
+        <button class="fav ${x.favorite?'active':''}" title="お気に入り">
+          <svg width="20" height="20" viewBox="0 0 24 24"><path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+        </button>
+        <div class="meta">
+          <span class="badge" style="border-color:${catColor}; background:color-mix(in oklab, ${catColor} 14%, var(--card))">${escapeHTML(x.category)}</span>
+          ${pro}
+          <span class="badge" title="使用回数">▶ ${(x.usageCount||0)}</span>
+        </div>
+        <h3>${escapeHTML(x.title)}</h3>
+        <p class="desc">${escapeHTML(x.desc||'')}</p>
+        <div class="tags">${tags}</div>
+        <div class="actions">
+          ${links || '<span class="sub">（リンク未設定）</span>'}
+          <button class="btn ghost open-edit" data-id="${x.id}">編集</button>
+          <button class="btn ghost open-del" data-id="${x.id}">削除</button>
+        </div>
+      </article>`;
+    }
+
+    function onFavClick(ev){
+      const card = ev.currentTarget.closest('.card'); const id = card.dataset.id;
+      const item = state.tools.find(t=>t.id===id); if(!item) return;
+      item.favorite = !item.favorite; item.updatedAt = Date.now(); saveState(); render();
+    }
+
+    function onOpenMain(ev){
+      const card = ev.currentTarget.closest('.card'); const id = card.dataset.id;
+      const item = state.tools.find(t=>t.id===id); if(!item) return;
+      item.usageCount = (item.usageCount||0)+1; item.lastUsed = Date.now(); item.updatedAt = Date.now(); saveState();
+    }
+
+    function openEdit(id){
+      const edit = document.getElementById('modal-edit');
+      const form = document.getElementById('editForm');
+      form.reset();
+      form.dataset.id = id||'';
+      document.getElementById('editMode').textContent = id? '編集' : '新規';
+
+      if(id){
+        const item = state.tools.find(t=>t.id===id);
+        if(item){
+          form.title.value = item.title||'';
+          form.category.value = item.category||'その他';
+          form.desc.value = item.desc||'';
+          form.main.value = item.links?.main||'';
+          form.wp.value = item.links?.wp||'';
+          form.gh.value = item.links?.gh||'';
+          form.tags.value = (item.tags||[]).join(',');
+          form.pro.checked = !!item.pro;
+          form.favorite.checked = !!item.favorite;
+        }
+      }
+      toggleModal('modal-edit', true);
+
+      form.onsubmit = (e) => {
+        e.preventDefault();
+        const data = {
+          title: form.title.value.trim(),
+          category: form.category.value,
+          desc: form.desc.value.trim(),
+          links: { main: form.main.value.trim(), wp: form.wp.value.trim(), gh: form.gh.value.trim() },
+          tags: form.tags.value.split(',').map(s=>s.trim()).filter(Boolean),
+          pro: form.pro.checked,
+          favorite: form.favorite.checked,
+        };
+        if(!data.title) return alert('タイトルは必須です');
+
+        if(form.dataset.id){
+          const item = state.tools.find(t=>t.id===form.dataset.id);
+          Object.assign(item, data); item.updatedAt = Date.now();
+        }else{
+          state.tools.push(Object.assign({ id: crypto.randomUUID(), createdAt: Date.now(), updatedAt: Date.now(), usageCount:0, lastUsed:0 }, data));
+        }
+        saveState(); refreshChips(); render(); toggleModal('modal-edit', false);
+      };
+      document.getElementById('btn-cancel').onclick = () => toggleModal('modal-edit', false);
+    }
+
+    function delTool(id){
+      if(!confirm('削除してよろしいですか？')) return;
+      state.tools = state.tools.filter(t=>t.id!==id); saveState(); refreshChips(); render();
+    }
+
+    function exportJSON(){
+      const data = JSON.stringify(state, null, 2);
+      const blob = new Blob([data], {type:'application/json'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = 'tom-tools-portal.json'; a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    function normalizeImport(arr){
+      return arr.map(x=>({
+        id: x.id || crypto.randomUUID(),
+        title: x.title||'', category: x.category||'その他', desc: x.desc||'',
+        tags: Array.isArray(x.tags)? x.tags.filter(Boolean):[],
+        links: x.links||{}, pro: !!x.pro, favorite: !!x.favorite,
+        createdAt: x.createdAt||Date.now(), updatedAt: Date.now(),
+        usageCount: x.usageCount||0, lastUsed: x.lastUsed||0
+      }));
+    }
+
+    function loadState(){
+      try{ return JSON.parse(localStorage.getItem(LS_KEY)||''); }catch{ return null }
+    }
+    function saveState(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+
+    function toggleSelect(arr, val){
+      const i = arr.indexOf(val); if(i>=0) arr.splice(i,1); else arr.push(val); saveState(); refreshChips(); render();
+    }
+
+    function toggleModal(id, on){
+      const m = document.getElementById(id); if(!m) return;
+      m.classList.toggle('open', !!on); m.setAttribute('aria-hidden', on? 'false':'true');
+      if(on){
+        const esc = (ev) => { if(ev.key==='Escape'){ toggleModal(id,false); window.removeEventListener('keydown', esc);} };
+        window.addEventListener('keydown', esc);
+        m.addEventListener('click', (ev) => { if(ev.target === m) toggleModal(id,false); }, { once:true });
+      }
+    }
+
+    function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); } }
+    function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+    function escapeAttr(s){ return escapeHTML(s); }
+  })();
+  </script>
+</body>
+</html>
