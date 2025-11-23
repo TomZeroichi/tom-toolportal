@@ -1,538 +1,608 @@
 <!DOCTYPE html>
-<html lang="ja" data-theme="auto">
+<html lang="ja">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>TOMツールポータル｜TOMゼロイチラボ</title>
-  <meta name="color-scheme" content="light dark">
-  <style>
-    /* ==========================
-       TOM ツールポータル v1.0
-       - 単一HTMLで完結 / WP・GitHub対応
-       - 検索/カテゴリ/タグ/並び替え/お気に入り/最近/Pro区分
-       - ダーク/ライト/自動切替・ローカル保存・JSON入出力
-       ========================== */
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>TOMツール一覧</title>
+<style>
+  :root{
+    --fx:#2563eb;        --fx-hover:#1d4ed8;
+    --mnp:#d97706;       --mnp-hover:#b45309;
+    --diag:#0ea5a4;      --diag-hover:#0b8b8a;
+    --manage:#6366f1;    --manage-hover:#4f46e5;
+    --account:#e11d48;   --account-hover:#be123c;
+    --retail:#16a34a;    --retail-hover:#15803d;
+    --salon:#c026d3;     --salon-hover:#a21caf;
+    --other:#334155;     --other-hover:#1f2937;
+    --fav:#f59e0b; --ink:#0f172a; --bg:#f9fafb;
+    --muted:#94a3b8; --ring:#cbd5e1;
+  }
+  *{box-sizing:border-box}
+  body{
+    font-family: "Noto Sans JP", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Hiragino Sans", Meiryo, sans-serif;
+    margin:20px; background:var(--bg); color:#111;
+  }
+  h1{ margin:0 0 6px }
+  h2{
+    margin-top:28px; border-left:6px solid #2563eb; padding-left:10px;
+    display:flex; align-items:center; gap:.5rem; cursor:pointer; user-select:none;
+  }
+  h2 .caret{ display:inline-block; transition:.2s transform; font-size:.9em }
+  h2.collapsed .caret{ transform:rotate(-90deg) }
 
-    :root{
-      --bg:#f8fafc; --card:#ffffff; --ink:#0f172a; --muted:#475569; --line:#e2e8f0;
-      --key:#2563eb; --ok:#16a34a; --warn:#d97706; --danger:#dc2626; --pro:#c026d3;
-      --chip:#eef2f7; --radius:14px; --shadow:0 6px 18px rgba(2,6,23,.08); --shadow-sm:0 2px 8px rgba(2,6,23,.06);
-      --fs:16px; --trans:.18s ease;
-    }
-    @media (prefers-color-scheme: dark){
-      html[data-theme="auto"]{
-        --bg:#0b1220; --card:#0f172a; --ink:#e2e8f0; --muted:#cbd5e1; --line:#1f2937; --chip:#0b1324; --shadow:0 8px 24px rgba(0,0,0,.35); --shadow-sm:0 2px 10px rgba(0,0,0,.3);
-      }
-    }
-    html[data-theme="dark"]{
-      --bg:#0b1220; --card:#0f172a; --ink:#e2e8f0; --muted:#cbd5e1; --line:#1f2937; --chip:#0b1324; --shadow:0 8px 24px rgba(0,0,0,.35); --shadow-sm:0 2px 10px rgba(0,0,0,.3);
-    }
+  /* サブカテゴリー見出し */
+  h3{
+    margin:14px 0 6px; padding:8px 10px; border-radius:10px; background:#ffffff; border:1px solid #e2e8f0;
+    display:flex; align-items:center; gap:.5rem; cursor:pointer; user-select:none; font-size:1rem;
+  }
+  h3 .caret{ display:inline-block; transition:.2s transform; font-size:.85em }
+  h3.collapsed .caret{ transform:rotate(-90deg) }
+  /* ジャンル色に合わせた左ボーダー */
+  h3.fx{ border-left:5px solid var(--fx) }
+  h3.mnp{ border-left:5px solid var(--mnp) }
+  h3.diag{ border-left:5px solid var(--diag) }
+  h3.manage{ border-left:5px solid var(--manage) }
+  h3.account{ border-left:5px solid var(--account) }
+  h3.retail{ border-left:5px solid var(--retail) }
+  h3.salon{ border-left:5px solid var(--salon) }
+  h3.other{ border-left:5px solid var(--other) }
 
-    *{box-sizing:border-box} html,body{margin:0;padding:0}
-    body{font:400 var(--fs)/1.6 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans JP","Hiragino Sans","Yu Gothic UI","YuGothic",Meiryo,sans-serif; background:var(--bg); color:var(--ink)}
-    a{color:inherit; text-decoration:none}
+  small.help{ display:block; color:#475569; margin-bottom:8px }
 
-    .wrap{max-width:1200px; margin:0 auto; padding:18px}
+  /* 検索バー */
+  .searchbar{ margin:12px 0 16px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .searchbox{ position:relative; flex:1 1 320px; }
+  .searchbox input{
+    width:100%; padding:12px 44px 12px 36px; border:1px solid var(--ring); border-radius:10px; background:#fff;
+    font-size:16px; outline:0;
+  }
+  .searchbox .icon{
+    position:absolute; left:10px; top:50%; transform:translateY(-50%); font-size:18px; color:var(--muted); pointer-events:none;
+  }
+  .searchbox .clear{
+    position:absolute; right:8px; top:50%; transform:translateY(-50%);
+    width:28px; height:28px; border-radius:6px; border:1px solid #e2e8f0; background:#f8fafc; cursor:pointer; font-size:16px; color:#475569;
+    display:grid; place-items:center;
+  }
+  .search-meta{ color:#64748b; font-size:.95rem }
+  .search-meta .count{ font-weight:700; color:#0f172a }
 
-    /* Header */
-    header{position:sticky; top:0; z-index:20; backdrop-filter:saturate(140%) blur(6px); background:color-mix(in oklab, var(--bg) 75%, transparent); border-bottom:1px solid var(--line)}
-    .head{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 18px}
-    .brand{display:flex; align-items:center; gap:12px}
-    .logo{width:36px;height:36px;display:grid;place-items:center;border-radius:12px;background:conic-gradient(from 180deg, #60a5fa, #2563eb 40%, #1d4ed8 60%, #60a5fa); box-shadow:var(--shadow-sm)}
-    .logo svg{filter:drop-shadow(0 2px 4px rgba(0,0,0,.25))}
-    .title{font-weight:800; letter-spacing:.2px}
-    .sub{font-size:12px; color:var(--muted)}
+  .btn-grid{
+    display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+    gap:12px; margin:12px 0 18px;
+  }
+  .tool-card{ position:relative }
+  .tool-btn{
+    display:block; position:relative; text-align:center; color:#fff; padding:14px; border-radius:10px; text-decoration:none; font-weight:700;
+    box-shadow:0 2px 6px rgba(0,0,0,.1); transition:transform .2s ease, background-color .2s ease, filter .2s ease;
+    filter:saturate(1.05); min-height:48px;
+  }
+  .tool-btn:hover{ transform:translateY(-2px) }
 
-    .head-actions{display:flex; gap:8px; align-items:center}
-    .btn{display:inline-flex; align-items:center; gap:8px; padding:9px 12px; background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:12px; box-shadow:var(--shadow-sm); cursor:pointer; transition:transform var(--trans), background var(--trans), border-color var(--trans)}
-    .btn:hover{transform:translateY(-1px)}
-    .btn.primary{background:var(--key); color:#fff; border-color:color-mix(in oklab, var(--key), black 12%)}
-    .btn.ghost{background:transparent}
-    .btn.small{padding:6px 10px; border-radius:10px}
-    .btn.icon{padding:8px}
+  /* ジャンル別カラー（ボタン） */
+  .btn--fx     { background:var(--fx) }     .btn--fx:hover     { background:var(--fx-hover) }
+  .btn--mnp    { background:var(--mnp) }    .btn--mnp:hover    { background:var(--mnp-hover) }
+  .btn--diag   { background:var(--diag) }   .btn--diag:hover   { background:var(--diag-hover) }
+  .btn--manage { background:var(--manage) } .btn--manage:hover { background:var(--manage-hover) }
+  .btn--account{ background:var(--account)} .btn--account:hover{ background:var(--account-hover) }
+  .btn--retail { background:var(--retail) } .btn--retail:hover { background:var(--retail-hover) }
+  .btn--salon  { background:var(--salon) }  .btn--salon:hover  { background:var(--salon-hover) }
+  .btn--other  { background:var(--other) }  .btn--other:hover  { background:var(--other-hover) }
 
-    /* Controls */
-    .controls{display:grid; gap:12px; grid-template-columns:1fr; padding:12px 18px}
-    .searchbar{display:flex; gap:10px}
-    .searchwrap{position:relative; flex:1}
-    .searchwrap input{width:100%; padding:14px 14px 14px 42px; border-radius:14px; border:1px solid var(--line); background:var(--card); color:var(--ink); box-shadow:var(--shadow-sm)}
-    .searchwrap svg{position:absolute; left:12px; top:50%; transform:translateY(-50%); opacity:.6}
+  /* 見出しの左線色 */
+  h2.fx{ border-left-color:var(--fx) }
+  h2.mnp{ border-left-color:var(--mnp) }
+  h2.diag{ border-left-color:var(--diag) }
+  h2.manage{ border-left-color:var(--manage) }
+  h2.account{ border-left-color:var(--account) }
+  h2.retail{ border-left-color:var(--retail) }
+  h2.salon{ border-left-color:var(--salon) }
+  h2.other{ border-left-color:var(--other) }
+  h2.favorites{ border-left-color:var(--fav) }
 
-    .bar{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
-    .select{padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:var(--card); color:var(--ink); box-shadow:var(--shadow-sm)}
+  /* お気に入りスター（中央寄せ） */
+  .fav-toggle{
+    position:absolute; top:8px; right:8px;
+    width:32px; height:32px; border-radius:50%;
+    background:rgba(255,255,255,.2); border:1px solid rgba(255,255,255,.5);
+    display:grid; place-items:center; cursor:pointer; line-height:1; backdrop-filter:blur(2px);
+  }
+  .fav-toggle span{
+    font-size:18px; color:#fff; text-shadow:0 1px 1px rgba(0,0,0,.25);
+    transform:translateY(1px); display:block;
+  }
+  .fav-toggle.active{ background:#fff; border-color:#fff }
+  .fav-toggle.active span{ color:#f59e0b; text-shadow:none; transform:translateY(1px) }
 
-    .filters{display:flex; flex-wrap:wrap; gap:8px}
-    .chip{display:inline-flex; align-items:center; gap:6px; padding:8px 10px; border-radius:999px; background:var(--chip); color:var(--ink); border:1px solid var(--line); cursor:pointer; user-select:none}
-    .chip.active{outline:2px solid color-mix(in oklab, var(--key), white 25%)}
-    .chip .dot{width:8px;height:8px;border-radius:50%}
+  /* 更新バッジ */
+  .badge{
+    position:absolute; left:6px; top:6px; padding:2px 6px; border-radius:999px; font-size:12px; font-weight:800;
+    background:#fff; color:#111;
+  }
+  .badge.up{ color:#0ea5a4 }
+  .badge.new{ color:#ef4444 }
 
-    /* Grid */
-    .grid{display:grid; gap:14px; grid-template-columns:repeat(1, minmax(0, 1fr))}
-    @media (min-width:700px){ .grid{grid-template-columns:repeat(2, minmax(0, 1fr))} }
-    @media (min-width:1024px){ .grid{grid-template-columns:repeat(3, minmax(0, 1fr))} }
+  /* 折りたたみ */
+  .section.collapsed > .section-body{ display:none }
+  .subsection.collapsed > .btn-grid{ display:none }
 
-    /* Card */
-    .card{position:relative; background:var(--card); border:1px solid var(--line); border-radius:16px; padding:14px; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:12px}
-    .card h3{margin:0; font-size:18px}
-    .meta{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
-    .badge{font-size:12px; padding:4px 8px; border-radius:999px; border:1px solid var(--line); background:var(--chip)}
-    .badge.pro{background:color-mix(in oklab, var(--pro) 18%, var(--chip)); border-color:color-mix(in oklab, var(--pro), white 60%); color:color-mix(in oklab, var(--pro), white 20%); font-weight:700}
-    .tags{display:flex; flex-wrap:wrap; gap:6px}
-    .tag{font-size:12px; padding:4px 8px; border-radius:8px; border:1px dashed var(--line); color:var(--muted)}
-    .desc{color:var(--muted); font-size:14px}
-    .card .actions{display:flex; gap:8px; flex-wrap:wrap}
-    .card .actions .btn{flex:none}
-    .fav{position:absolute; right:10px; top:10px; border:none; background:transparent; cursor:pointer; opacity:.8}
-    .fav svg{display:block}
-    .fav.active svg{fill:#f59e0b}
-    .corner{position:absolute; left:-1px; top:-1px; padding:4px 8px; border-bottom-right-radius:10px; border:1px solid var(--line); background:linear-gradient(135deg, #e0f2fe, #f5f3ff)}
-
-    /* Empty */
-    .empty{padding:28px; text-align:center; color:var(--muted); border:1px dashed var(--line); border-radius:16px}
-
-    /* Footer */
-    footer{padding:24px 18px; color:var(--muted)}
-
-    /* Modal */
-    .modal{position:fixed; inset:0; display:none; place-items:center; background:rgba(2,6,23,.5)}
-    .modal.open{display:grid}
-    .dialog{width:min(860px, 96vw); max-height:90vh; overflow:auto; background:var(--card); color:var(--ink); border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow); padding:18px}
-    .form{display:grid; gap:12px; grid-template-columns:1fr}
-    .row{display:grid; gap:8px}
-    .row.cols{grid-template-columns:1fr 1fr; gap:12px}
-    .row label{font-size:12px; color:var(--muted)}
-    .row input, .row textarea, .row select{width:100%; padding:10px 12px; border-radius:12px; border:1px solid var(--line); background:var(--card); color:var(--ink)}
-    .row textarea{min-height:88px; resize:vertical}
-
-    .hl{font-weight:700; color:var(--ink)}
-  </style>
+  .hint{ font-size:.9em; color:#64748b; margin:2px 0 14px }
+  mark{ background:#fde68a; padding:0 .15em; border-radius:3px }
+</style>
 </head>
 <body>
-  <header>
-    <div class="head wrap">
-      <div class="brand">
-        <div class="logo" aria-hidden="true">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg"><path d="M7 11c0-3.866 3.134-7 7-7a7 7 0 1 1-7 7Z" opacity=".75"/><path d="M5 19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-.5a5.5 5.5 0 1 0-14 0V19Z"/></svg>
+
+<h1>&#x1f680; TOMツール一覧</h1>
+<small class="help">&#x2b50;：星でお気に入り／ジャンル・サブカテゴリーは見出しタップで開閉</small>
+
+<!-- &#x1f50e; 検索バー -->
+<div class="searchbar" role="search">
+  <div class="searchbox">
+    <span class="icon">&#x1f50e;</span>
+    <input id="toolSearch" type="search" placeholder="ツール名で検索（/ でフォーカス、Esc でクリア）" autocomplete="off" />
+    <button id="searchClear" class="clear" title="クリア">×</button>
+  </div>
+  <div class="search-meta"><span class="count" id="searchCount">全件表示</span></div>
+</div>
+
+<!-- お気に入り -->
+<section id="sec-fav" class="section">
+  <h2 class="favorites"><span class="caret">▼</span> &#x2b50; お気に入り</h2>
+  <div class="section-body">
+    <div class="btn-grid" id="fav-grid"></div>
+    <div class="hint" id="fav-hint" style="display:none;">まだお気に入りはありません。各ツールの&#x2b50;をタップしてください。</div>
+  </div>
+</section>
+
+<!-- 副業診断 -->
+<section class="section">
+  <h2 class="diag"><span class="caret">▼</span> &#x1f9e9; 副業診断</h2>
+  <div class="section-body">
+    <div class="subsection">
+      <h3 class="diag"><span class="caret">▼</span> 診断ツール</h3>
+      <div class="btn-grid">
+        <div class="tool-card">
+          <a href="https://tomzeroichi.github.io/fukugyo-shindan" class="tool-btn btn--diag" data-title="副業適性ミニ診断（無料版）">副業適性ミニ診断（無料版）</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
         </div>
-        <div>
-          <div class="title">TOMツールポータル</div>
-          <div class="sub">ゼロからイチへ。ラボの資産を一ヶ所に。</div>
+        <div class="tool-card">
+          <a href="https://tomzeroichi.github.io/fukugyo-shindan-pro" class="tool-btn btn--diag" data-title="副業適性精密診断Pro（有料版）">副業適性精密診断Pro（有料版）</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
         </div>
       </div>
-      <div class="head-actions">
-        <button class="btn small" id="btn-help">使い方</button>
-        <button class="btn small" id="btn-import">インポート</button>
-        <button class="btn small" id="btn-export">エクスポート</button>
-        <select class="select" id="themeSel" aria-label="テーマ">
-          <option value="auto">テーマ: 自動</option>
-          <option value="light">テーマ: ライト</option>
-          <option value="dark">テーマ: ダーク</option>
-        </select>
-        <button class="btn primary" id="btn-new">＋ ツール追加</button>
-      </div>
-    </div>
-  </header>
-
-  <main class="wrap">
-    <!-- Controls -->
-    <section class="controls">
-      <div class="searchbar">
-        <div class="searchwrap">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15.5 14h-.8l-.3-.3a6.5 6.5 0 1 0-.7.7l.3.3v.8l5 5 1.5-1.5-5-5Zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14Z"/></svg>
-          <input id="q" placeholder="検索（タイトル・説明・タグ）」" autocomplete="off" />
-        </div>
-        <select id="viewSel" class="select">
-          <option value="all">すべて</option>
-          <option value="fav">お気に入り</option>
-          <option value="recent">最近使った</option>
-        </select>
-        <select id="sortSel" class="select">
-          <option value="recent">並び: 最近更新</option>
-          <option value="name">並び: 名前</option>
-          <option value="popular">並び: よく使う</option>
-          <option value="new">並び: 新着</option>
-        </select>
-      </div>
-      <div class="bar">
-        <span class="sub">カテゴリ:</span>
-        <div class="filters" id="catChips"></div>
-      </div>
-      <div class="bar">
-        <span class="sub">タグ:</span>
-        <div class="filters" id="tagChips"></div>
-      </div>
-    </section>
-
-    <!-- Grid -->
-    <section id="grid" class="grid" aria-live="polite"></section>
-
-    <div id="empty" class="empty" style="display:none">該当するツールがありません。フィルタを変更するか、<span class="hl">ツール追加</span>してください。</div>
-  </main>
-
-  <footer class="wrap">
-    <div>ローカル保存: 自動／<button class="btn small" id="btn-reset">初期化</button></div>
-    <div style="margin-top:8px; font-size:12px">v1.0 – 単一HTML（WP/静的サイトOK）／ショートカット: <span class="badge">/</span> 検索、<span class="badge">f</span> お気に入り表示切替</div>
-  </footer>
-
-  <!-- Modals -->
-  <div class="modal" id="modal-edit" aria-hidden="true">
-    <div class="dialog">
-      <h2 style="margin:0 0 10px">ツール編集 <span id="editMode" class="badge">新規</span></h2>
-      <form class="form" id="editForm">
-        <div class="row cols">
-          <div class="row"><label>タイトル</label><input name="title" required></div>
-          <div class="row"><label>カテゴリ</label>
-            <select name="category" required>
-              <option>FX</option><option>MNP</option><option>診断</option><option>管理</option><option>アカウント</option><option>物販</option><option>サロン</option><option>その他</option>
-            </select>
-          </div>
-        </div>
-        <div class="row"><label>説明</label><textarea name="desc" placeholder="用途や使い方を短く"></textarea></div>
-        <div class="row cols">
-          <div class="row"><label>メインURL</label><input name="main"></div>
-          <div class="row"><label>WordPress URL</label><input name="wp"></div>
-        </div>
-        <div class="row cols">
-          <div class="row"><label>GitHub URL</label><input name="gh"></div>
-          <div class="row"><label>タグ（カンマ区切り）</label><input name="tags" placeholder="例: lot,calc,usdtry"></div>
-        </div>
-        <div class="row cols">
-          <div class="row"><label><input type="checkbox" name="pro"> Pro限定</label></div>
-          <div class="row"><label><input type="checkbox" name="favorite"> お気に入り</label></div>
-        </div>
-        <div class="row" style="display:flex; gap:8px; justify-content:flex-end">
-          <button type="button" class="btn" id="btn-cancel">キャンセル</button>
-          <button type="submit" class="btn primary">保存</button>
-        </div>
-      </form>
     </div>
   </div>
+</section>
 
-  <div class="modal" id="modal-help" aria-hidden="true">
-    <div class="dialog">
-      <h2 style="margin:0 0 10px">使い方</h2>
-      <ol style="margin:0 0 12px 18px; padding:0 0 0 8px">
-        <li>検索バーでタイトル・説明・タグを横断検索。<span class="badge">/</span> キーでフォーカス。</li>
-        <li>カテゴリとタグのチップをクリックでフィルタ。複数選択可。</li>
-        <li>カードの★でお気に入り。上部の表示切替で「お気に入り」「最近」を切り替え。</li>
-        <li>「＋ ツール追加」から自分のツールを登録。URLは空でもOK。</li>
-        <li>右上のインポート/エクスポートでJSON入出力。環境間の同期にどうぞ。</li>
-        <li>テーマは「自動/ライト/ダーク」。設定・データは自動で保存されます。</li>
-      </ol>
-      <div style="text-align:right"><button class="btn" id="btn-help-close">閉じる</button></div>
+<!-- MNP -->
+<section class="section">
+  <h2 class="mnp"><span class="caret">▼</span> &#x1f4f1; MNP関連</h2>
+  <div class="section-body">
+    <div class="subsection">
+      <h3 class="mnp"><span class="caret">▼</span> チェックツール</h3>
+      <div class="btn-grid">
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/mnp-riekikeisan-test" class="tool-btn btn--mnp" data-title="MNP利益チェックツール">MNP利益チェックツール</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+        <div class="tool-card">
+          <a href="https://tomzeroichi.github.io/mnpcheck-tool" class="tool-btn btn--mnp" data-title="MNP乗り換えチェック(GH版)">MNP乗り換えチェック(GH版)</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/mnpchecktool" class="tool-btn btn--mnp" data-title="MNP乗り換えチェック(WP版)">MNP乗り換えチェック(WP版)</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+      </div>
     </div>
   </div>
+</section>
 
-  <input id="fileInput" type="file" accept="application/json" style="display:none" />
+<!-- FX -->
+<section class="section">
+  <h2 class="fx"><span class="caret">▼</span> &#x1f4ca; FX・トレード関連</h2>
+  <div class="section-body">
 
-  <script>
-  ;(() => {
-    const LS_KEY = 'tom-tool-portal-v1';
+    <div class="subsection">
+      <h3 class="fx"><span class="caret">▼</span> ユーティリティ</h3>
+      <div class="btn-grid">
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/tft-lite/index.html" class="tool-btn btn--fx" data-title="ゴトー日カウントダウン">ゴトー日カウントダウン</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/indicator-calendar" class="tool-btn btn--fx" data-title="指標カレンダー">指標カレンダー</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+      </div>
+    </div>
 
-    /** 初期データ（必要に応じてURLを差し替えてください） */
-    const initialTools = [
-      t('FX収益シミュレーター', 'FX', '資金/ロット/複利シミュレーション', ['fx','sim','lot'], {main:'#', wp:'#', gh:'#'}),
-      t('2社間ボーナス最適化', 'FX', 'USD/JPY両モード。最大ボーナス配分と必要入金を最適化', ['bonus','hedge'], {main:'#'}),
-      t('ゴトー日カウントダウン', 'FX', 'JST 9:55前後のリマインドと一括登録', ['gtd','fix'], {main:'#'}),
-      t('TIS指標カレンダー', 'FX', '週/日タイムライン・絞り込み・ピン留め', ['calendar','macro'], {main:'#'}),
-      t('TOM BOSH SYSTEM Console', 'FX', 'ボーナスアービトラージ半自動コンソール', ['arbi','console'], {main:'#'}, true),
-      t('TOM FOCUS TRADE（ゴトー日EA）', 'FX', '9:55短期/安値ロングモード/トレール/ナンピン', ['ea','usdjp y'], {main:'#'}, true),
-      t('ボーナスアービトラージ・マニュアル', 'FX', '2口座ヘッジ/強制LC検知→反対側一括決済', ['manual'], {main:'#'}),
+    <div class="subsection">
+      <h3 class="fx"><span class="caret">▼</span> シミュレーター / 最適化</h3>
+      <div class="btn-grid">
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/revenue-simulator" class="tool-btn btn--fx" data-title="収益シミュレーター(両建て)">収益シミュレーター(両建て)</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/bonus-optimization-tool" class="tool-btn btn--fx" data-title="2社間ボーナス最適化ツール">2社間ボーナス最適化ツール</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/lot-keisan-test" class="tool-btn btn--fx" data-title="ロット計算ツール">ロット計算ツール</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+      </div>
+    </div>
 
-      t('MNP乗り換えチェックツール', 'MNP', 'キャリア条件・保有期限・並び替えモーダル', ['mnp','checker'], {main:'#'}),
+    <div class="subsection">
+      <h3 class="fx"><span class="caret">▼</span> ガイド / マニュアル</h3>
+      <div class="btn-grid">
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/tft-cd-manual" class="tool-btn btn--fx" data-title="ゴトー日カウントダウンマニュアル">&#x1f4d6;ゴトー日カウントダウンマニュアル</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/bonus-keisan-manual" class="tool-btn btn--fx" data-title="ボーナス最適化マニュアル">&#x1f4d6;ボーナス最適化マニュアル</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+      </div>
+    </div>
 
-      t('目標逆算プランナー', '診断', '「月+10万」から週次タスクを逆算。ダーク/ライト対応', ['plan','kpi'], {main:'#'}),
-      t('副業適性診断', '診断', 'FX/物販/MNP/EAなどの適性を診断', ['diagnosis'], {main:'#'}),
+  </div>
+</section>
 
-      t('タスク管理ツール（Apps Script）', '管理', '一覧＋＋から登録/メンバー/強制スキャン', ['gapps','todo'], {main:'#'}),
-      t('収益KPIダッシュボード', '管理', 'カテゴリ別勝率/カード追加/クイック入力', ['kpi','dashboard'], {main:'#'}),
+<!-- 物販・買取 -->
+<section class="section">
+  <h2 class="retail"><span class="caret">▼</span> &#x1f4bc; 物販・買取関連</h2>
+  <div class="section-body">
+    <div class="subsection">
+      <h3 class="retail"><span class="caret">▼</span> 計算・最適化</h3>
+      <div class="btn-grid">
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/kaitori-tool-kanri" class="tool-btn btn--retail" data-title="買取利益計算ツール(管理者用)">買取利益計算ツール(管理者用)</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/kaitori-tool" class="tool-btn btn--retail" data-title="買取利益計算ツール">買取利益計算ツール</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/pokeka-psa-simulator" class="tool-btn btn--retail" data-title="ポケカPSAシミュレーター">ポケカPSAシミュレーター</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+      </div>
+    </div>
+    <div class="subsection">
+      <h3 class="retail"><span class="caret">▼</span> 管理ツール</h3>
+      <div class="btn-grid">
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/pokeka-kanri-test" class="tool-btn btn--retail" data-title="ポケカ管理ツール">ポケカ管理ツール</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
-      t('複垢管理ツール', 'アカウント', 'プロファイルの一括管理・マスク機能', ['account','multi'], {main:'#'}),
-      t('複垢ジェネレーター', 'アカウント', '姓入力→名を自動生成。重複防止', ['generator'], {main:'#'}),
+<!-- 管理・計画 -->
+<section class="section">
+  <h2 class="manage"><span class="caret">▼</span> &#x1f4c5; 管理・計画ツール</h2>
+  <div class="section-body">
+    <div class="subsection">
+      <h3 class="manage"><span class="caret">▼</span> 管理ツール</h3>
+      <div class="btn-grid">
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/chusenkanri-db-test" class="tool-btn btn--manage" data-title="抽選管理ツール">抽選管理ツール DB版</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+      </div>
+    </div>
+    <div class="subsection">
+      <h3 class="manage"><span class="caret">▼</span> ダッシュボード系</h3>
+      <div class="btn-grid">
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com" class="tool-btn btn--manage" data-title="収益KPIダッシュボード">収益KPIダッシュボード</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
-      t('買取仕入れ計算ツール', '物販', '割引/ポイント/クーポン対応。利益率算出', ['calc','retail'], {main:'#'}),
-      t('ポケカ管理ツール', '物販', 'レアリティ/販売ステータス/ダッシュボード', ['pokemon','card'], {main:'#'}),
-      t('抽選管理ツール', '物販', '抽選期限/引換期限の直近表示・履歴', ['lottery'], {main:'#'}),
+<!-- アカウント -->
+<section class="section">
+  <h2 class="account"><span class="caret">▼</span> &#x1f465; アカウント関連</h2>
+  <div class="section-body">
+    <div class="subsection">
+      <h3 class="account"><span class="caret">▼</span> 管理 / 生成</h3>
+      <div class="btn-grid">
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/fukuakatool" class="tool-btn btn--account" data-title="複垢管理ツール">複垢管理ツール</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/fukuaka-generator-test" class="tool-btn btn--account" data-title="複垢ジェネレーター">複垢ジェネレーター</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
-      t('サロン投稿ツール', 'サロン', 'URLや画像から応募情報を抽出して投稿フォーマット化', ['salon','post'], {main:'#'}),
-      t('投稿フォーマット変換ツール', 'サロン', '締切/引換期限/応募先の整形出力', ['formatter'], {main:'#'}),
+<!-- その他 -->
+<section class="section">
+  <h2 class="other"><span class="caret">▼</span> &#x1f3ae; その他</h2>
+  <div class="section-body">
+    <div class="subsection">
+      <h3 class="other"><span class="caret">▼</span> SNS・運用</h3>
+      <div class="btn-grid">
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/tiktok-kanri" class="tool-btn btn--other" data-title="TikTok管理ツール">TikTok管理ツール</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
-      t('TikTok Lite管理ツール', 'その他', '親子端末の相関図/QR管理/チェックイン除外', ['tiktok','graph'], {main:'#'}),
-      t('セットリスト管理', 'その他', '曲リスト/再生/タイマー/テーマ切替', ['music','setlist'], {main:'#'}),
-    ];
+<script>
+(function(){
+  const LS_FAV = 'tom_tools_favorites';
+  const LS_COL = 'tom_tools_collapsed';
+  const LS_SUB = 'tom_tools_subcollapsed';
+  const LS_BADGE = 'tom_tool_badges';
 
-    function t(title, category, desc, tags=[], links={}, pro=false){
-      return { id: crypto.randomUUID(), title, category, desc, tags, links, pro,
-        createdAt: Date.now() - Math.floor(Math.random()*30)*86400000, updatedAt: Date.now(), usageCount: 0, lastUsed: 0, favorite: false };
+  const favGrid = document.getElementById('fav-grid');
+  const favSection = document.getElementById('sec-fav');
+  const favHint = document.getElementById('fav-hint');
+
+  const $q = document.getElementById('toolSearch');
+  const $clear = document.getElementById('searchClear');
+  const $count = document.getElementById('searchCount');
+
+  const getFavs = ()=> JSON.parse(localStorage.getItem(LS_FAV)||'[]');
+  const setFavs = (arr)=> localStorage.setItem(LS_FAV, JSON.stringify(arr));
+  const getBadges = ()=> JSON.parse(localStorage.getItem(LS_BADGE)||'{}');
+  const setBadges = (obj)=> localStorage.setItem(LS_BADGE, JSON.stringify(obj));
+  const getCollapsed = ()=> JSON.parse(localStorage.getItem(LS_COL)||'{}');
+  const setCollapsed = (obj)=> localStorage.setItem(LS_COL, JSON.stringify(obj));
+  const getSubCollapsed = ()=> JSON.parse(localStorage.getItem(LS_SUB)||'{}');
+  const setSubCollapsed = (obj)=> localStorage.setItem(LS_SUB, JSON.stringify(obj));
+
+  // かな・カナを同一視 / NFKC
+  const toKanaBase = (s)=> s.replace(/[\u3041-\u3096]/g, ch => String.fromCharCode(ch.charCodeAt(0)+0x60));
+  const norm = (s)=> toKanaBase(s.normalize('NFKC').toLowerCase());
+  const escapeHtml = (s)=> s.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+  const highlight = (el, query)=>{
+    const raw = (el.dataset.title || el.textContent || '').trim();
+    if(!query){ el.textContent = raw; return; }
+    const nTitle = norm(raw), nQ = norm(query);
+    const i = nTitle.indexOf(nQ);
+    if(i<0){ el.textContent = raw; return; }
+    const before = raw.slice(0, i), mid = raw.slice(i, i+nQ.length), after = raw.slice(i+nQ.length);
+    el.innerHTML = `${escapeHtml(before)}<mark>${escapeHtml(mid)}</mark>${escapeHtml(after)}`;
+  };
+
+  // お気に入り
+  function initFavorites(){
+    const favs = new Set(getFavs());
+    document.querySelectorAll('.tool-card').forEach(card=>{
+      const a = card.querySelector('a.tool-btn');
+      const star = card.querySelector('.fav-toggle');
+      if(!a || !star) return;
+      const href = a.getAttribute('href');
+      star.classList.toggle('active', favs.has(href));
+      star.addEventListener('click', (e)=>{
+        e.stopPropagation(); e.preventDefault();
+        const now = new Set(getFavs());
+        if(now.has(href)){ now.delete(href); star.classList.remove('active'); }
+        else { now.add(href); star.classList.add('active'); }
+        setFavs([...now]);
+        renderFavorites();
+        runSearch();
+      });
+    });
+    renderFavorites();
+  }
+  function renderFavorites(){
+    const favs = getFavs();
+    favGrid.innerHTML = '';
+    if(favs.length===0){
+      favSection.classList.remove('collapsed');
+      favHint.style.display='block';
+      return;
     }
+    favHint.style.display='none';
+    document.querySelectorAll('.tool-card').forEach(card=>{
+      const a = card.querySelector('a.tool-btn');
+      if(!a) return;
+      const href = a.getAttribute('href');
+      if(favs.includes(href)){
+        const clone = card.cloneNode(true);
+        const star = clone.querySelector('.fav-toggle');
+        if(star){
+          star.addEventListener('click',(e)=>{ e.stopPropagation(); e.preventDefault();
+            const now = new Set(getFavs());
+            if(now.has(href)) now.delete(href); else now.add(href);
+            setFavs([...now]); initFavorites(); runSearch();
+          });
+        }
+        bindLongPress(clone.querySelector('a.tool-btn'));
+        applyBadge(clone.querySelector('a.tool-btn'));
+        favGrid.appendChild(clone);
+      }
+    });
+  }
 
-    /** 状態 */
-    let state = loadState();
-    if(!state){
-      state = { tools: initialTools, prefs: { theme: 'auto', view: 'all', sort: 'recent', cats: [], tags: [] } };
-      saveState();
+  // 折りたたみ
+  function initCollapse(){
+    const col = getCollapsed();
+    document.querySelectorAll('section.section').forEach(sec=>{
+      const h2 = sec.querySelector('h2');
+      const body = sec.querySelector('.section-body');
+      if(!h2 || !body) return;
+      const key = 'sec:' + h2.textContent.trim();
+      if(col[key]){ sec.classList.add('collapsed'); h2.classList.add('collapsed'); }
+      h2.addEventListener('click', ()=>{
+        sec.classList.toggle('collapsed'); h2.classList.toggle('collapsed');
+        const cur = getCollapsed(); cur[key] = sec.classList.contains('collapsed'); setCollapsed(cur);
+      });
+    });
+  }
+  function initSubCollapse(){
+    const col = getSubCollapsed();
+    document.querySelectorAll('.subsection').forEach(sub=>{
+      const h3 = sub.querySelector('h3');
+      const grid = sub.querySelector('.btn-grid');
+      if(!h3 || !grid) return;
+      const key = 'sub:' + h3.textContent.trim();
+      if(col[key]){ sub.classList.add('collapsed'); h3.classList.add('collapsed'); }
+      h3.addEventListener('click', ()=>{
+        sub.classList.toggle('collapsed'); h3.classList.toggle('collapsed');
+        const cur = getSubCollapsed(); cur[key] = sub.classList.contains('collapsed'); setSubCollapsed(cur);
+      });
+    });
+  }
+
+  // 更新バッジ（長押し切替）
+  function parseDate(s){ const t = Date.parse(s); return isNaN(t)?null:new Date(t); }
+  function daysDiff(d1,d2){ return Math.floor((d1 - d2)/(1000*60*60*24)); }
+  function applyBadge(a){
+    if(!a) return;
+    a.parentElement.querySelectorAll('.badge').forEach(b=>b.remove());
+    const href = a.getAttribute('href');
+    const saved = getBadges()[href];
+    let kind = saved; // 'up' | 'new'
+    const explicit = (a.dataset.badge||'').toLowerCase();
+    if(!kind && (explicit==='up'||explicit==='new')) kind = explicit;
+    if(!kind && a.dataset.updated){
+      const d = parseDate(a.dataset.updated);
+      if(d){
+        const diff = daysDiff(new Date(), d);
+        if(diff<=7) kind='new'; else if(diff<=30) kind='up';
+      }
     }
+    if(!kind || kind==='none') return;
+    const badge = document.createElement('span');
+    badge.className = 'badge ' + (kind==='new'?'new':'up');
+    badge.textContent = (kind==='new'?'NEW':'UP');
+    a.parentElement.appendChild(badge);
+  }
+  function bindLongPress(a){
+    if(!a) return;
+    let timer=null; const href = a.getAttribute('href');
+    const start = ()=>{
+      timer = setTimeout(()=>{
+        const map = getBadges();
+        const cur = (map[href]||'none');
+        const next = cur==='none' ? 'up' : (cur==='up' ? 'new' : 'none');
+        if(next==='none') delete map[href]; else map[href]=next;
+        setBadges(map); applyBadge(a); renderFavorites(); runSearch();
+      },600);
+    };
+    const cancel = ()=>{ if(timer){ clearTimeout(timer); timer=null; } };
+    a.addEventListener('mousedown', start);
+    a.addEventListener('touchstart', start);
+    ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=>a.addEventListener(ev, cancel));
+  }
+  function initBadges(){
+    document.querySelectorAll('a.tool-btn').forEach(a=>{ applyBadge(a); bindLongPress(a); });
+  }
 
-    // DOM
-    const q = document.getElementById('q');
-    const grid = document.getElementById('grid');
-    const empty = document.getElementById('empty');
-    const viewSel = document.getElementById('viewSel');
-    const sortSel = document.getElementById('sortSel');
-    const themeSel = document.getElementById('themeSel');
-    const catChips = document.getElementById('catChips');
-    const tagChips = document.getElementById('tagChips');
+  // ===== 検索（安定版） =====
+  let savedCollapse = null, savedSubCollapse = null;
+  function rememberCollapse(){ savedCollapse = getCollapsed(); savedSubCollapse = getSubCollapsed(); }
+  function restoreCollapse(){
+    if(savedCollapse) setCollapsed(savedCollapse);
+    if(savedSubCollapse) setSubCollapsed(savedSubCollapse);
+    document.querySelectorAll('section.section').forEach(sec=>{
+      const h2 = sec.querySelector('h2');
+      const key = 'sec:' + h2.textContent.trim();
+      const collapsed = !!getCollapsed()[key];
+      sec.classList.toggle('collapsed', collapsed);
+      h2.classList.toggle('collapsed', collapsed);
+      sec.style.display = '';
+    });
+    document.querySelectorAll('.subsection').forEach(sub=>{
+      const h3 = sub.querySelector('h3');
+      const key = 'sub:' + h3.textContent.trim();
+      const collapsed = !!getSubCollapsed()[key];
+      sub.classList.toggle('collapsed', collapsed);
+      h3.classList.toggle('collapsed', collapsed);
+      sub.style.display = '';
+    });
+  }
+  function openForSearch(){
+    document.querySelectorAll('section.section').forEach(sec=>{
+      sec.classList.remove('collapsed'); sec.querySelector('h2')?.classList.remove('collapsed'); sec.style.display='';
+    });
+    document.querySelectorAll('.subsection').forEach(sub=>{
+      sub.classList.remove('collapsed'); sub.querySelector('h3')?.classList.remove('collapsed'); sub.style.display='';
+    });
+  }
+  function runSearch(){
+    const q = $q.value.trim();
+    const nq = norm(q);
 
-    // Prefs 初期表示
-    themeSel.value = (state.prefs.theme||'auto');
-    document.documentElement.setAttribute('data-theme', themeSel.value);
-    viewSel.value = state.prefs.view || 'all';
-    sortSel.value = state.prefs.sort || 'recent';
+    if(q) openForSearch();
 
-    /** イベント */
-    themeSel.onchange = () => { document.documentElement.setAttribute('data-theme', themeSel.value); state.prefs.theme = themeSel.value; saveState(); };
-    viewSel.onchange = () => { state.prefs.view = viewSel.value; saveState(); render(); };
-    sortSel.onchange = () => { state.prefs.sort = sortSel.value; saveState(); render(); };
-    q.oninput = debounce(() => render(), 120);
+    const cards = Array.from(document.querySelectorAll('.tool-card'));
+    const seenHref = new Set();
+    let shownUnique = 0;
 
-    document.getElementById('btn-new').onclick = () => openEdit();
-    document.getElementById('btn-help').onclick = () => toggleModal('modal-help', true);
-    document.getElementById('btn-help-close').onclick = () => toggleModal('modal-help', false);
-    document.getElementById('btn-import').onclick = () => document.getElementById('fileInput').click();
-    document.getElementById('btn-export').onclick = exportJSON;
-    document.getElementById('btn-reset').onclick = () => { if(confirm('ポータルを初期化します。よろしいですか？')){ localStorage.removeItem(LS_KEY); location.reload(); } };
+    cards.forEach(card=>{
+      const a = card.querySelector('a.tool-btn'); if(!a) return;
+      const title = (a.dataset.title || a.textContent || '').trim();
+      const match = nq ? norm(title).includes(nq) : true;
 
-    document.getElementById('fileInput').addEventListener('change', async (e) => {
-      const file = e.target.files?.[0]; if(!file) return;
-      const text = await file.text();
-      try{
-        const data = JSON.parse(text);
-        if(!Array.isArray(data.tools)) throw new Error('フォーマット不正');
-        state.tools = normalizeImport(data.tools);
-        state.prefs = Object.assign({ theme:'auto', view:'all', sort:'recent', cats:[], tags:[] }, data.prefs||{});
-        saveState();
-        themeSel.value = state.prefs.theme; document.documentElement.setAttribute('data-theme', themeSel.value);
-        viewSel.value = state.prefs.view; sortSel.value = state.prefs.sort;
-        refreshChips(); render();
-        alert('インポート完了');
-      }catch(err){ alert('読み込みに失敗しました: '+ err.message); }
-      e.target.value = '';
+      card.style.display = match ? '' : 'none';
+      if(match){
+        highlight(a, q);
+        const href = a.getAttribute('href') || '';
+        if(!seenHref.has(href)){ seenHref.add(href); shownUnique++; }
+      }else{
+        a.textContent = title;
+      }
     });
 
-    // キーボード: / で検索, f でお気に入りビュー切替
-    window.addEventListener('keydown', (ev) => {
-      if(ev.key === '/' && document.activeElement !== q){ ev.preventDefault(); q.focus(); }
-      if(ev.key.toLowerCase() === 'f' && !/input|textarea|select/i.test(document.activeElement.tagName)){
-        viewSel.value = (viewSel.value === 'fav' ? 'all' : 'fav'); viewSel.onchange();
-      }
+    // サブセクション表示制御
+    document.querySelectorAll('.subsection').forEach(sub=>{
+      const anyVisible = Array.from(sub.querySelectorAll('.tool-card'))
+        .some(c => c.style.display !== 'none');
+      sub.style.display = (nq && !anyVisible) ? 'none' : '';
+    });
+    // セクション表示制御（お気に入り以外）
+    document.querySelectorAll('section.section').forEach(sec=>{
+      if(sec.id === 'sec-fav'){ sec.style.display=''; return; }
+      const anyVisible = Array.from(sec.querySelectorAll('.tool-card'))
+        .some(c => c.style.display !== 'none');
+      sec.style.display = (nq && !anyVisible) ? 'none' : '';
     });
 
-    // Chips 初期化
-    refreshChips();
+    if(!q){ $count.textContent = '全件表示'; restoreCollapse(); }
+    else  { $count.textContent = `一致 ${shownUnique} 件`; }
+  }
 
-    // 初回描画
-    render();
+  // 入力イベント・ショートカット
+  function debounce(fn,ms){ let t; return (...args)=>{ clearTimeout(t); t=setTimeout(()=>fn(...args),ms); }; }
+  const debSearch = debounce(runSearch, 80);
+  $q.addEventListener('input', debSearch);
+  $q.addEventListener('keydown', (e)=>{ if(e.key==='Escape'){ e.preventDefault(); $q.value=''; runSearch(); $q.blur(); } });
+  $clear.addEventListener('click', ()=>{ $q.value=''; runSearch(); $q.focus(); });
+  window.addEventListener('keydown', (e)=>{
+    const tag = (document.activeElement && document.activeElement.tagName)||'';
+    if(e.key==='/' && tag!=='INPUT' && tag!=='TEXTAREA' && !e.metaKey && !e.ctrlKey){ e.preventDefault(); $q.focus(); }
+  });
 
-    /*** 関数群 ***/
-    function refreshChips(){
-      const cats = [...new Set(state.tools.map(t=>t.category))].sort();
-      catChips.innerHTML = cats.map(c => chipHTML(c, state.prefs.cats.includes(c))).join('');
-      catChips.querySelectorAll('.chip').forEach(el => el.onclick = () => { toggleSelect(state.prefs.cats, el.dataset.val); render(); });
-
-      const tagSet = new Set(); state.tools.forEach(t => t.tags?.forEach(x => tagSet.add(x)));
-      const tags = [...tagSet].sort();
-      tagChips.innerHTML = tags.map(tg => chipHTML('#'+tg, state.prefs.tags.includes(tg), tg)).join('');
-      tagChips.querySelectorAll('.chip').forEach(el => el.onclick = () => { toggleSelect(state.prefs.tags, el.dataset.val); render(); });
-    }
-
-    function chipHTML(label, active=false, raw){
-      const val = raw || label; const show = raw ? label : label;
-      const dot = `<span class="dot" style="background:${labelColor(label)}"></span>`;
-      return `<span class="chip ${active?'active':''}" data-val="${escapeHTML(raw||label)}">${dot}${escapeHTML(show)}</span>`;
-    }
-
-    function labelColor(label){
-      const map = { FX:'#2563eb', MNP:'#d97706', 診断:'#0ea5a4', 管理:'#6366f1', アカウント:'#e11d48', 物販:'#16a34a', サロン:'#c026d3', その他:'#334155' };
-      return map[label] || '#94a3b8';
-    }
-
-    function render(){
-      saveState();
-      const qv = (q.value || '').trim().toLowerCase();
-      const cats = state.prefs.cats || []; const tags = state.prefs.tags || [];
-
-      let list = [...state.tools];
-
-      // view filter
-      if(viewSel.value === 'fav') list = list.filter(x => !!x.favorite);
-      if(viewSel.value === 'recent') list = list.filter(x => x.lastUsed).sort((a,b) => b.lastUsed - a.lastUsed).slice(0, 18);
-
-      // query filter
-      if(qv){
-        list = list.filter(x => [x.title, x.desc, (x.tags||[]).join(' ')].join(' ').toLowerCase().includes(qv));
-      }
-
-      // category & tag filter
-      if(cats.length) list = list.filter(x => cats.includes(x.category));
-      if(tags.length) list = list.filter(x => (x.tags||[]).some(tg => tags.includes(tg)));
-
-      // sort
-      list.sort((a,b) => sortCompare(a,b,state.prefs.sort));
-
-      grid.innerHTML = list.map(cardHTML).join('');
-      grid.querySelectorAll('.fav').forEach(btn => btn.onclick = onFavClick);
-      grid.querySelectorAll('.open-main').forEach(a => a.onclick = onOpenMain);
-      grid.querySelectorAll('.open-edit').forEach(b => b.onclick = () => openEdit(b.dataset.id));
-      grid.querySelectorAll('.open-del').forEach(b => b.onclick = () => delTool(b.dataset.id));
-
-      empty.style.display = list.length ? 'none' : 'block';
-    }
-
-    function sortCompare(a,b,mode){
-      if(mode === 'name') return a.title.localeCompare(b.title, 'ja');
-      if(mode === 'popular') return (b.usageCount||0) - (a.usageCount||0);
-      if(mode === 'new') return (b.createdAt||0) - (a.createdAt||0);
-      return (b.updatedAt||0) - (a.updatedAt||0); // recent
-    }
-
-    function cardHTML(x){
-      const catColor = labelColor(x.category);
-      const pro = x.pro ? '<span class="badge pro">PRO</span>' : '';
-      const newFlag = (Date.now() - (x.createdAt||0) < 14*86400000) ? '<span class="corner">NEW</span>' : '';
-      const tags = (x.tags||[]).map(t => `<span class="tag">#${escapeHTML(t)}</span>`).join('');
-      const links = [
-        x.links?.main ? `<a class="btn open-main" href="${escapeAttr(x.links.main)}" target="_blank" rel="noopener" aria-label="開く">開く</a>` : '',
-        x.links?.wp ? `<a class="btn" href="${escapeAttr(x.links.wp)}" target="_blank" rel="noopener">WP</a>` : '',
-        x.links?.gh ? `<a class="btn" href="${escapeAttr(x.links.gh)}" target="_blank" rel="noopener">GitHub</a>` : ''
-      ].join('');
-
-      return `<article class="card" data-id="${x.id}">
-        ${newFlag}
-        <button class="fav ${x.favorite?'active':''}" title="お気に入り">
-          <svg width="20" height="20" viewBox="0 0 24 24"><path d="M12 17.27 18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
-        </button>
-        <div class="meta">
-          <span class="badge" style="border-color:${catColor}; background:color-mix(in oklab, ${catColor} 14%, var(--card))">${escapeHTML(x.category)}</span>
-          ${pro}
-          <span class="badge" title="使用回数">▶ ${(x.usageCount||0)}</span>
-        </div>
-        <h3>${escapeHTML(x.title)}</h3>
-        <p class="desc">${escapeHTML(x.desc||'')}</p>
-        <div class="tags">${tags}</div>
-        <div class="actions">
-          ${links || '<span class="sub">（リンク未設定）</span>'}
-          <button class="btn ghost open-edit" data-id="${x.id}">編集</button>
-          <button class="btn ghost open-del" data-id="${x.id}">削除</button>
-        </div>
-      </article>`;
-    }
-
-    function onFavClick(ev){
-      const card = ev.currentTarget.closest('.card'); const id = card.dataset.id;
-      const item = state.tools.find(t=>t.id===id); if(!item) return;
-      item.favorite = !item.favorite; item.updatedAt = Date.now(); saveState(); render();
-    }
-
-    function onOpenMain(ev){
-      const card = ev.currentTarget.closest('.card'); const id = card.dataset.id;
-      const item = state.tools.find(t=>t.id===id); if(!item) return;
-      item.usageCount = (item.usageCount||0)+1; item.lastUsed = Date.now(); item.updatedAt = Date.now(); saveState();
-    }
-
-    function openEdit(id){
-      const edit = document.getElementById('modal-edit');
-      const form = document.getElementById('editForm');
-      form.reset();
-      form.dataset.id = id||'';
-      document.getElementById('editMode').textContent = id? '編集' : '新規';
-
-      if(id){
-        const item = state.tools.find(t=>t.id===id);
-        if(item){
-          form.title.value = item.title||'';
-          form.category.value = item.category||'その他';
-          form.desc.value = item.desc||'';
-          form.main.value = item.links?.main||'';
-          form.wp.value = item.links?.wp||'';
-          form.gh.value = item.links?.gh||'';
-          form.tags.value = (item.tags||[]).join(',');
-          form.pro.checked = !!item.pro;
-          form.favorite.checked = !!item.favorite;
-        }
-      }
-      toggleModal('modal-edit', true);
-
-      form.onsubmit = (e) => {
-        e.preventDefault();
-        const data = {
-          title: form.title.value.trim(),
-          category: form.category.value,
-          desc: form.desc.value.trim(),
-          links: { main: form.main.value.trim(), wp: form.wp.value.trim(), gh: form.gh.value.trim() },
-          tags: form.tags.value.split(',').map(s=>s.trim()).filter(Boolean),
-          pro: form.pro.checked,
-          favorite: form.favorite.checked,
-        };
-        if(!data.title) return alert('タイトルは必須です');
-
-        if(form.dataset.id){
-          const item = state.tools.find(t=>t.id===form.dataset.id);
-          Object.assign(item, data); item.updatedAt = Date.now();
-        }else{
-          state.tools.push(Object.assign({ id: crypto.randomUUID(), createdAt: Date.now(), updatedAt: Date.now(), usageCount:0, lastUsed:0 }, data));
-        }
-        saveState(); refreshChips(); render(); toggleModal('modal-edit', false);
-      };
-      document.getElementById('btn-cancel').onclick = () => toggleModal('modal-edit', false);
-    }
-
-    function delTool(id){
-      if(!confirm('削除してよろしいですか？')) return;
-      state.tools = state.tools.filter(t=>t.id!==id); saveState(); refreshChips(); render();
-    }
-
-    function exportJSON(){
-      const data = JSON.stringify(state, null, 2);
-      const blob = new Blob([data], {type:'application/json'});
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob); a.download = 'tom-tools-portal.json'; a.click();
-      URL.revokeObjectURL(a.href);
-    }
-
-    function normalizeImport(arr){
-      return arr.map(x=>({
-        id: x.id || crypto.randomUUID(),
-        title: x.title||'', category: x.category||'その他', desc: x.desc||'',
-        tags: Array.isArray(x.tags)? x.tags.filter(Boolean):[],
-        links: x.links||{}, pro: !!x.pro, favorite: !!x.favorite,
-        createdAt: x.createdAt||Date.now(), updatedAt: Date.now(),
-        usageCount: x.usageCount||0, lastUsed: x.lastUsed||0
-      }));
-    }
-
-    function loadState(){
-      try{ return JSON.parse(localStorage.getItem(LS_KEY)||''); }catch{ return null }
-    }
-    function saveState(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); }
-
-    function toggleSelect(arr, val){
-      const i = arr.indexOf(val); if(i>=0) arr.splice(i,1); else arr.push(val); saveState(); refreshChips(); render();
-    }
-
-    function toggleModal(id, on){
-      const m = document.getElementById(id); if(!m) return;
-      m.classList.toggle('open', !!on); m.setAttribute('aria-hidden', on? 'false':'true');
-      if(on){
-        const esc = (ev) => { if(ev.key==='Escape'){ toggleModal(id,false); window.removeEventListener('keydown', esc);} };
-        window.addEventListener('keydown', esc);
-        m.addEventListener('click', (ev) => { if(ev.target === m) toggleModal(id,false); }, { once:true });
-      }
-    }
-
-    function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a), ms); } }
-    function escapeHTML(s){ return (s||'').replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
-    function escapeAttr(s){ return escapeHTML(s); }
-  })();
-  </script>
+  // 初期化
+  initFavorites();
+  initCollapse();
+  initSubCollapse();
+  initBadges();
+  rememberCollapse();
+  runSearch();
+})();
+</script>
 </body>
 </html>
