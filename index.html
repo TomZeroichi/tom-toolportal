@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>TOMツールポータル</title>
+<title>TOMツール一覧</title>
 <style>
   :root{
     --fx:#2563eb;        --fx-hover:#1d4ed8;
@@ -132,14 +132,14 @@
 </head>
 <body>
 
-<h1>&#x1f680; TOMツールポータル</h1>
-<small class="help">&#x2b50;：星でお気に入り追加／ジャンル・サブカテゴリーは見出しタップで開閉</small>
+<h1>&#x1f680; TOMツール一覧</h1>
+<small class="help">&#x2b50;：星でお気に入り／ジャンル・サブカテゴリーは見出しタップで開閉</small>
 
 <!-- &#x1f50e; 検索バー -->
 <div class="searchbar" role="search">
   <div class="searchbox">
     <span class="icon">&#x1f50e;</span>
-    <input id="toolSearch" type="search" placeholder="ツール名で検索" autocomplete="off" />
+    <input id="toolSearch" type="search" placeholder="ツール名で検索（/ でフォーカス、Esc でクリア）" autocomplete="off" />
     <button id="searchClear" class="clear" title="クリア">×</button>
   </div>
   <div class="search-meta"><span class="count" id="searchCount">全件表示</span></div>
@@ -198,82 +198,36 @@
   </div>
 </section>
 
-<!-- FX -->
-<section class="section">
-  <h2 class="fx"><span class="caret">▼</span> &#x1f4ca; FX・トレード関連</h2>
-  <div class="section-body">
-
-    <div class="subsection">
-      <h3 class="fx"><span class="caret">▼</span> ユーティリティ</h3>
-      <div class="btn-grid">
-        <div class="tool-card">
-          <a href="https://tomtradesystem.com/tft-lite/index.html" class="tool-btn btn--fx" data-title="ゴトー日カウントダウン">ゴトー日カウントダウン</a>
-          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
-        </div>
-        <div class="tool-card">
-          <a href="https://tomtradesystem.com/indicator-calendar" class="tool-btn btn--fx" data-title="指標カレンダー">指標カレンダー</a>
-          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
-        </div>
-      </div>
-    </div>
-
-    <div class="subsection">
-      <h3 class="fx"><span class="caret">▼</span> シミュレーター / 最適化</h3>
-      <div class="btn-grid">
-        <div class="tool-card">
-          <a href="https://tomtradesystem.com/revenue-simulator" class="tool-btn btn--fx" data-title="収益シミュレーター(両建て)">収益シミュレーター(両建て)</a>
-          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
-        </div>
-        <div class="tool-card">
-          <a href="https://tomtradesystem.com/bonus-optimization-tool" class="tool-btn btn--fx" data-title="2社間ボーナス最適化ツール">2社間ボーナス最適化ツール</a>
-          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
-        </div>
-        <div class="tool-card">
-          <a href="https://tomtradesystem.com/lot-keisan-test" class="tool-btn btn--fx" data-title="ロット計算ツール">ロット計算ツール</a>
-          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
-        </div>
-      </div>
-    </div>
-
-    <div class="subsection">
-      <h3 class="fx"><span class="caret">▼</span> ガイド / マニュアル</h3>
-      <div class="btn-grid">
-        <div class="tool-card">
-          <a href="https://tomtradesystem.com/tft-cd-manual" class="tool-btn btn--fx" data-title="ゴトー日カウントダウンマニュアル">&#x1f4d6;ゴトー日カウントダウンマニュアル</a>
-          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
-        </div>
-        <div class="tool-card">
-          <a href="https://tomtradesystem.com/bonus-keisan-manual" class="tool-btn btn--fx" data-title="ボーナス最適化マニュアル">&#x1f4d6;ボーナス最適化マニュアル</a>
-          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
-        </div>
-      </div>
-    </div>
-
-  </div>
-</section>
-
 <!-- 物販・買取 -->
 <section class="section">
   <h2 class="retail"><span class="caret">▼</span> &#x1f4bc; 物販・買取関連</h2>
   <div class="section-body">
     <div class="subsection">
-      <h3 class="retail"><span class="caret">▼</span> 計算・最適化</h3>
+      <h3 class="retail"><span class="caret">▼</span> 利益計算</h3>
       <div class="btn-grid">
         <div class="tool-card">
           <a href="https://tomtradesystem.com/kaitori-tool" class="tool-btn btn--retail" data-title="買取利益計算ツール">買取利益計算ツール</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
+      </div>
+    </div>
+    <div class="subsection">
+      <h3 class="retail"><span class="caret">▼</span> ポケカ関連</h3>
+      <div class="btn-grid">
+        <div class="tool-card">
+          <a href="https://tomtradesystem.com/pokeka-kanri-test" class="tool-btn btn--retail" data-title="ポケカ管理ツール">ポケカ管理ツール</a>
           <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
         </div>
         <div class="tool-card">
           <a href="https://tomtradesystem.com/pokeka-psa-simulator" class="tool-btn btn--retail" data-title="ポケカPSAシミュレーター">ポケカPSAシミュレーター</a>
           <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
         </div>
-      </div>
-    </div>
-    <div class="subsection">
-      <h3 class="retail"><span class="caret">▼</span> 管理ツール</h3>
-      <div class="btn-grid">
+　　　　<div class="tool-card">
+          <a href="https://tomtradesystem.com/fukuakatool" class="tool-btn btn--account" data-title="複垢管理ツール">複垢管理ツール</a>
+          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
+        </div>
         <div class="tool-card">
-          <a href="https://tomtradesystem.com/pokeka-kanri-test" class="tool-btn btn--retail" data-title="ポケカ管理ツール">ポケカ管理ツール</a>
+          <a href="https://tomtradesystem.com/fukuaka-generator-test" class="tool-btn btn--account" data-title="複垢ジェネレーター">複垢ジェネレーター</a>
           <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
         </div>
       </div>
@@ -299,26 +253,6 @@
       <div class="btn-grid">
         <div class="tool-card">
           <a href="https://tomtradesystem.com" class="tool-btn btn--manage" data-title="収益KPIダッシュボード">収益KPIダッシュボード</a>
-          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- アカウント -->
-<section class="section">
-  <h2 class="account"><span class="caret">▼</span> &#x1f465; アカウント関連</h2>
-  <div class="section-body">
-    <div class="subsection">
-      <h3 class="account"><span class="caret">▼</span> 管理 / 生成</h3>
-      <div class="btn-grid">
-        <div class="tool-card">
-          <a href="https://tomtradesystem.com/fukuakatool" class="tool-btn btn--account" data-title="複垢管理ツール">複垢管理ツール</a>
-          <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
-        </div>
-        <div class="tool-card">
-          <a href="https://tomtradesystem.com/fukuaka-generator-test" class="tool-btn btn--account" data-title="複垢ジェネレーター">複垢ジェネレーター</a>
           <button class="fav-toggle" aria-label="お気に入り"><span>☆</span></button>
         </div>
       </div>
