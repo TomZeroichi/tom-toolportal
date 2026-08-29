@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TOM 古物商申請書作成 v0.14</title>
+<style>
+:root{--p:#173b32;--bg:#f5f7f6;--line:#dbe3df;--text:#18211e;--muted:#66736e;--danger:#b83b32;--warn:#9d6b00;--ok:#16845b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Yu Gothic",sans-serif;color:var(--text)}
+.wrap{max-width:900px;margin:auto;padding:24px}.head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}.brand{font-size:24px;font-weight:900}.ver{font-size:12px;color:var(--muted)}
+.card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px;margin-bottom:14px;box-shadow:0 4px 18px rgba(20,50,40,.05)}.title{font-size:17px;font-weight:900;margin-bottom:8px}.sub{font-size:12px;color:var(--muted);line-height:1.7}
+.boot{display:flex;gap:9px;align-items:center;padding:11px 14px;border:1px solid var(--line);border-radius:12px;background:#fff;margin-bottom:14px}.dot{width:10px;height:10px;border-radius:50%;background:#d99a16;flex:0 0 auto}.dot.ok{background:var(--ok)}.dot.err{background:#c4483d}
+.qr-area{display:grid;grid-template-columns:250px 1fr;gap:24px;align-items:center;margin-top:14px}.qr-card{border:1px solid var(--line);border-radius:16px;padding:14px;text-align:center}.qr{width:220px;height:220px;margin:auto;display:flex;align-items:center;justify-content:center}.qr img,.qr canvas{width:220px!important;height:220px!important}.qr-label{font-weight:900;margin-top:8px}
+.status{display:flex;gap:10px;align-items:center;padding:12px;border-radius:12px;background:#f7faf9}.sdot{width:11px;height:11px;border-radius:50%;background:#aaa}.sdot.ok{background:var(--ok)}.sdot.warn{background:#d99a16}.sdot.err{background:#c4483d}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}.metric{border:1px solid var(--line);border-radius:13px;padding:14px}.metric b{display:block;font-size:20px}.metric span{font-size:11px;color:var(--muted)}
+.btn{border:0;border-radius:11px;padding:12px 16px;font-weight:900;cursor:pointer}.primary{background:var(--p);color:#fff}.secondary{background:#edf2f0;color:var(--p)}.danger{background:#fff1ef;color:var(--danger)}button:disabled{opacity:.4;cursor:not-allowed}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}.actions .btn{min-width:190px}.issues{margin-top:10px;font-size:12px;line-height:1.8}.e{color:var(--danger)}.w{color:var(--warn)}.msg{margin-top:12px;padding:12px;border-radius:11px;background:#f7faf9;font-size:12px;display:none}.url{font-size:11px;color:var(--muted);word-break:break-all;margin-top:8px}
+@media(max-width:650px){.wrap{padding:14px}.grid,.qr-area{grid-template-columns:1fr}.actions .btn{width:100%}}
+</style></head><body><div class="wrap">
+<div class="head"><div><div class="brand">TOM 古物商申請書作成</div><div class="ver">クラウドPC版 v0.14</div></div><div class="sub">画面はクラウドから即表示</div></div>
+<div class="boot"><span class="dot" id="helperDot"></span><div><b id="helperTitle">PDFヘルパーを起動しています…</b><div class="sub" id="helperSub">画面は先に使えます。Word/PDF機能だけ裏で接続します。</div></div></div>
+<div class="card"><div class="title">① スマホで入力</div><div class="sub">PDFヘルパーとの接続が完了するとQRコードを表示します。同じWi‑Fiは不要です。</div><div class="qr-area"><div class="qr-card"><div class="qr" id="qr">同期情報を確認中…</div><div class="qr-label">スマホで読み取る</div></div><div><b>QRを読むだけです。</b><div class="sub" style="margin-top:8px">スマホ入力はSupabaseへ自動保存され、この画面へ反映されます。</div><div class="url" id="cloudUrl"></div></div></div></div>
+<div class="card"><div class="title">② 最新データ</div><div class="status"><span class="sdot" id="statusDot"></span><div><b id="statusTitle">起動中</b><div class="sub" id="statusSub">PDFヘルパーとの接続を待っています。</div></div></div><div class="grid"><div class="metric"><b id="applicant">-</b><span>申請者</span></div><div class="metric"><b id="errors">0</b><span>要修正</span></div><div class="metric"><b id="warnings">0</b><span>要確認</span></div></div><div class="issues" id="issues"></div></div>
+<div class="card"><div class="title">③ PDF作成・印刷</div><div class="sub">要修正が0件になったら「申請書PDFを作成」を押してください。元の正式3ページWordへ反映してPDF化します。</div><div class="actions"><button class="btn primary" id="generate" disabled>申請書PDFを作成</button><button class="btn secondary" id="refresh">最新データを取得</button><button class="btn danger" id="newSession">新しい申請を開始</button></div><div class="msg" id="msg"></div></div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+const q=s=>document.querySelector(s);
+const CLOUD_API='https://qoabqvzmajdiuwtrsmvs.supabase.co/functions/v1/kobutsu-sync';
+const MOBILE_APP='https://tomzeroichi.github.io/tom-toolportal/kobutsu/cloud_v012.html';
+const PORTS=Array.from({length:26},(_,i)=>8765+i);
+let helperBase='',sid='',token='',cloudUrl='',pollBusy=false,helperBusy=false,pdfTimer=null,pdfStarted=0;
+
+function setHelper(state,title,sub){q('#helperDot').className='dot '+(state||'');q('#helperTitle').textContent=title;q('#helperSub').textContent=sub||''}
+function setMsg(text,kind='normal'){const m=q('#msg');m.style.display='block';m.textContent=text;m.style.background=kind==='error'?'#fff0ee':kind==='done'?'#eaf7f1':'#f7faf9';m.style.color=kind==='error'?'#a52e25':kind==='done'?'#116a49':'#18211e'}
+function timeout(ms){return new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms))}
+async function tryPort(port){
+  const url=`http://127.0.0.1:${port}/api/info`;
+  const r=await Promise.race([fetch(url,{cache:'no-store',mode:'cors'}),timeout(900)]);
+  if(!r.ok)throw new Error('not ready');
+  const d=await r.json();
+  if(!d.ok||!d.session_id||!d.token)throw new Error('bad helper');
+  return {port,d};
+}
+async function findHelper(){
+  if(helperBusy||helperBase)return;helperBusy=true;
+  try{
+    const attempts=PORTS.map(p=>tryPort(p));
+    const found=await Promise.any(attempts);
+    helperBase=`http://127.0.0.1:${found.port}`;sid=found.d.session_id;token=found.d.token;
+    cloudUrl=`${MOBILE_APP}?sid=${encodeURIComponent(sid)}&token=${encodeURIComponent(token)}`;
+    setHelper('ok','PDFヘルパー接続済み',`127.0.0.1:${found.port} / Word・PDF機能を利用できます。`);
+    q('#cloudUrl').textContent=cloudUrl;renderQr();
+    await poll();
+  }catch(e){
+    setHelper('','PDFヘルパーを起動しています…','通常は数秒で接続します。画面は閉じずにそのままお待ちください。');
+  }finally{helperBusy=false}
+}
+function renderQr(){
+  const box=q('#qr');box.innerHTML='';
+  if(!cloudUrl){box.textContent='同期情報を確認中…';return}
+  try{new QRCode(box,{text:cloudUrl,width:220,height:220,correctLevel:QRCode.CorrectLevel.L})}catch(e){box.textContent='QRを作成できませんでした'}
+}
+async function cloudCall(action,extra={}){
+  if(!sid||!token)throw new Error('PDFヘルパー接続待ち');
+  const r=await fetch(CLOUD_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,session_id:sid,token,client_version:'0.14',...extra})});
+  let d={};try{d=await r.json()}catch(e){}
+  if(!r.ok)throw new Error(d.message||d.error||`HTTP ${r.status}`);return d;
+}
+async function poll(){
+  if(pollBusy||!sid||!token)return;pollBusy=true;
+  try{
+    const d=await cloudCall('get');const data=d?.payload?.state?.data||{};const es=Array.isArray(d?.validation?.errors)?d.validation.errors:[];const ws=Array.isArray(d?.validation?.warnings)?d.validation.warnings:[];
+    q('#applicant').textContent=[data.lastName,data.firstName].filter(Boolean).join(' ')||'-';q('#errors').textContent=es.length;q('#warnings').textContent=ws.length;
+    const hasInput=Object.keys(data).some(k=>{const v=data[k];return Array.isArray(v)?v.length>0:(v!==''&&v!==null&&v!==undefined)});
+    if(!hasInput){q('#statusTitle').textContent='クラウド接続済み・スマホ入力待ち';q('#statusSub').textContent='QRコードをスマホで読み取って入力を開始してください。';q('#statusDot').className='sdot ok'}
+    else{q('#statusTitle').textContent=es.length?'修正が必要です':'クラウド同期済み';q('#statusSub').textContent=d.updated_at?'最終更新：'+new Date(d.updated_at).toLocaleString():'同期済み';q('#statusDot').className='sdot '+(es.length?'err':ws.length?'warn':'ok')}
+    q('#issues').innerHTML=[...es.slice(0,6).map(x=>`<div class="e">❗ STEP${x.step||''} ${x.title||x}</div>`),...ws.slice(0,6).map(x=>`<div class="w">⚠️ STEP${x.step||''} ${x.title||x}</div>`)].join('');
+    q('#generate').disabled=es.length>0||!data.lastName||!helperBase;
+  }catch(e){q('#statusTitle').textContent='クラウド再接続中';q('#statusSub').textContent='最新データを再取得します。';q('#statusDot').className='sdot warn';q('#generate').disabled=true}
+  finally{pollBusy=false}
+}
+async function helperFetch(path,opt={}){if(!helperBase)throw new Error('PDFヘルパーがまだ起動していません');return fetch(helperBase+path,opt)}
+async function monitorPdf(){
+  try{const r=await helperFetch('/api/generate-status',{cache:'no-store'});const d=await r.json();if(!r.ok)throw new Error(d.message||'状態取得失敗');
+    if(d.state==='done'){clearInterval(pdfTimer);pdfTimer=null;setMsg('✅ '+(d.step||'PDF作成完了')+' - '+(d.message||'完成PDFを開きました。'),'done');setTimeout(poll,500);return}
+    if(d.state==='error'){clearInterval(pdfTimer);pdfTimer=null;setMsg('❌ '+(d.step||'PDF作成エラー')+'：'+(d.message||'不明なエラー'),'error');q('#generate').disabled=false;return}
+    const elapsed=Math.round((Date.now()-pdfStarted)/1000);setMsg(`⏳ ${d.step||'PDF作成中'}${d.message?' - '+d.message:''} （${elapsed}秒）`)
+  }catch(e){const elapsed=Math.round((Date.now()-pdfStarted)/1000);setMsg('PDF作成状態を確認しています… '+elapsed+'秒')}
+}
+q('#generate').onclick=async()=>{q('#generate').disabled=true;setMsg('⏳ 申請データを準備しています…');try{const r=await helperFetch('/api/generate',{method:'POST'});const d=await r.json();if(!r.ok)throw new Error(d.message||'作成失敗');pdfStarted=Date.now();if(pdfTimer)clearInterval(pdfTimer);await monitorPdf();pdfTimer=setInterval(monitorPdf,1000)}catch(e){setMsg('❌ エラー：'+e.message,'error');q('#generate').disabled=false}};
+q('#refresh').onclick=()=>{if(helperBase)poll();else findHelper()};
+q('#newSession').onclick=async()=>{if(!confirm('現在の同期を切り替えて、新しい申請を開始しますか？'))return;try{const r=await helperFetch('/api/new',{method:'POST'});const d=await r.json();if(!r.ok)throw new Error(d.message||'作成できませんでした');helperBase='';sid='';token='';cloudUrl='';q('#qr').textContent='同期情報を更新中…';setTimeout(findHelper,300)}catch(e){alert(e.message)}};
+
+findHelper();setInterval(()=>{if(!helperBase)findHelper();else poll()},3000);
+</script></body></html>
