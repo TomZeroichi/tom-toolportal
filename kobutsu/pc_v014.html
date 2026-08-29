@@ -24,6 +24,8 @@
 const q=s=>document.querySelector(s);
 const CLOUD_API='https://qoabqvzmajdiuwtrsmvs.supabase.co/functions/v1/kobutsu-sync';
 const MOBILE_APP='https://tomzeroichi.github.io/tom-toolportal/kobutsu/cloud_v012.html';
+const pageParams=new URLSearchParams(location.search);
+const instance=pageParams.get('instance')||'';
 const PORTS=Array.from({length:26},(_,i)=>8765+i);
 let helperBase='',sid='',token='',cloudUrl='',pollBusy=false,helperBusy=false,pdfTimer=null,pdfStarted=0;
 
@@ -31,62 +33,31 @@ function setHelper(state,title,sub){q('#helperDot').className='dot '+(state||'')
 function setMsg(text,kind='normal'){const m=q('#msg');m.style.display='block';m.textContent=text;m.style.background=kind==='error'?'#fff0ee':kind==='done'?'#eaf7f1':'#f7faf9';m.style.color=kind==='error'?'#a52e25':kind==='done'?'#116a49':'#18211e'}
 function timeout(ms){return new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),ms))}
 async function tryPort(port){
-  const url=`http://127.0.0.1:${port}/api/info`;
+  const url=`http://127.0.0.1:${port}/api/info?instance=${encodeURIComponent(instance)}`;
   const r=await Promise.race([fetch(url,{cache:'no-store',mode:'cors'}),timeout(900)]);
   if(!r.ok)throw new Error('not ready');
   const d=await r.json();
-  if(!d.ok||!d.session_id||!d.token)throw new Error('bad helper');
+  if(!d.ok||!d.session_id||!d.token||d.helper_version!=='0.14'||d.instance!==instance)throw new Error('other helper');
   return {port,d};
 }
 async function findHelper(){
   if(helperBusy||helperBase)return;helperBusy=true;
   try{
-    const attempts=PORTS.map(p=>tryPort(p));
-    const found=await Promise.any(attempts);
+    const found=await Promise.any(PORTS.map(p=>tryPort(p)));
     helperBase=`http://127.0.0.1:${found.port}`;sid=found.d.session_id;token=found.d.token;
     cloudUrl=`${MOBILE_APP}?sid=${encodeURIComponent(sid)}&token=${encodeURIComponent(token)}`;
     setHelper('ok','PDFヘルパー接続済み',`127.0.0.1:${found.port} / Word・PDF機能を利用できます。`);
-    q('#cloudUrl').textContent=cloudUrl;renderQr();
-    await poll();
-  }catch(e){
-    setHelper('','PDFヘルパーを起動しています…','通常は数秒で接続します。画面は閉じずにそのままお待ちください。');
-  }finally{helperBusy=false}
+    q('#cloudUrl').textContent=cloudUrl;renderQr();await poll();
+  }catch(e){setHelper('','PDFヘルパーを起動しています…','画面はすでに起動済みです。Word/PDF機能を裏で準備しています。')}
+  finally{helperBusy=false}
 }
-function renderQr(){
-  const box=q('#qr');box.innerHTML='';
-  if(!cloudUrl){box.textContent='同期情報を確認中…';return}
-  try{new QRCode(box,{text:cloudUrl,width:220,height:220,correctLevel:QRCode.CorrectLevel.L})}catch(e){box.textContent='QRを作成できませんでした'}
-}
-async function cloudCall(action,extra={}){
-  if(!sid||!token)throw new Error('PDFヘルパー接続待ち');
-  const r=await fetch(CLOUD_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,session_id:sid,token,client_version:'0.14',...extra})});
-  let d={};try{d=await r.json()}catch(e){}
-  if(!r.ok)throw new Error(d.message||d.error||`HTTP ${r.status}`);return d;
-}
-async function poll(){
-  if(pollBusy||!sid||!token)return;pollBusy=true;
-  try{
-    const d=await cloudCall('get');const data=d?.payload?.state?.data||{};const es=Array.isArray(d?.validation?.errors)?d.validation.errors:[];const ws=Array.isArray(d?.validation?.warnings)?d.validation.warnings:[];
-    q('#applicant').textContent=[data.lastName,data.firstName].filter(Boolean).join(' ')||'-';q('#errors').textContent=es.length;q('#warnings').textContent=ws.length;
-    const hasInput=Object.keys(data).some(k=>{const v=data[k];return Array.isArray(v)?v.length>0:(v!==''&&v!==null&&v!==undefined)});
-    if(!hasInput){q('#statusTitle').textContent='クラウド接続済み・スマホ入力待ち';q('#statusSub').textContent='QRコードをスマホで読み取って入力を開始してください。';q('#statusDot').className='sdot ok'}
-    else{q('#statusTitle').textContent=es.length?'修正が必要です':'クラウド同期済み';q('#statusSub').textContent=d.updated_at?'最終更新：'+new Date(d.updated_at).toLocaleString():'同期済み';q('#statusDot').className='sdot '+(es.length?'err':ws.length?'warn':'ok')}
-    q('#issues').innerHTML=[...es.slice(0,6).map(x=>`<div class="e">❗ STEP${x.step||''} ${x.title||x}</div>`),...ws.slice(0,6).map(x=>`<div class="w">⚠️ STEP${x.step||''} ${x.title||x}</div>`)].join('');
-    q('#generate').disabled=es.length>0||!data.lastName||!helperBase;
-  }catch(e){q('#statusTitle').textContent='クラウド再接続中';q('#statusSub').textContent='最新データを再取得します。';q('#statusDot').className='sdot warn';q('#generate').disabled=true}
-  finally{pollBusy=false}
-}
-async function helperFetch(path,opt={}){if(!helperBase)throw new Error('PDFヘルパーがまだ起動していません');return fetch(helperBase+path,opt)}
-async function monitorPdf(){
-  try{const r=await helperFetch('/api/generate-status',{cache:'no-store'});const d=await r.json();if(!r.ok)throw new Error(d.message||'状態取得失敗');
-    if(d.state==='done'){clearInterval(pdfTimer);pdfTimer=null;setMsg('✅ '+(d.step||'PDF作成完了')+' - '+(d.message||'完成PDFを開きました。'),'done');setTimeout(poll,500);return}
-    if(d.state==='error'){clearInterval(pdfTimer);pdfTimer=null;setMsg('❌ '+(d.step||'PDF作成エラー')+'：'+(d.message||'不明なエラー'),'error');q('#generate').disabled=false;return}
-    const elapsed=Math.round((Date.now()-pdfStarted)/1000);setMsg(`⏳ ${d.step||'PDF作成中'}${d.message?' - '+d.message:''} （${elapsed}秒）`)
-  }catch(e){const elapsed=Math.round((Date.now()-pdfStarted)/1000);setMsg('PDF作成状態を確認しています… '+elapsed+'秒')}
-}
+function renderQr(){const box=q('#qr');box.innerHTML='';if(!cloudUrl){box.textContent='同期情報を確認中…';return}try{new QRCode(box,{text:cloudUrl,width:220,height:220,correctLevel:QRCode.CorrectLevel.L})}catch(e){box.textContent='QRを作成できませんでした'}}
+async function cloudCall(action,extra={}){if(!sid||!token)throw new Error('PDFヘルパー接続待ち');const r=await fetch(CLOUD_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,session_id:sid,token,client_version:'0.14',...extra})});let d={};try{d=await r.json()}catch(e){}if(!r.ok)throw new Error(d.message||d.error||`HTTP ${r.status}`);return d}
+async function poll(){if(pollBusy||!sid||!token)return;pollBusy=true;try{const d=await cloudCall('get');const data=d?.payload?.state?.data||{};const es=Array.isArray(d?.validation?.errors)?d.validation.errors:[];const ws=Array.isArray(d?.validation?.warnings)?d.validation.warnings:[];q('#applicant').textContent=[data.lastName,data.firstName].filter(Boolean).join(' ')||'-';q('#errors').textContent=es.length;q('#warnings').textContent=ws.length;const hasInput=Object.keys(data).some(k=>{const v=data[k];return Array.isArray(v)?v.length>0:(v!==''&&v!==null&&v!==undefined)});if(!hasInput){q('#statusTitle').textContent='クラウド接続済み・スマホ入力待ち';q('#statusSub').textContent='QRコードをスマホで読み取って入力を開始してください。';q('#statusDot').className='sdot ok'}else{q('#statusTitle').textContent=es.length?'修正が必要です':'クラウド同期済み';q('#statusSub').textContent=d.updated_at?'最終更新：'+new Date(d.updated_at).toLocaleString():'同期済み';q('#statusDot').className='sdot '+(es.length?'err':ws.length?'warn':'ok')}q('#issues').innerHTML=[...es.slice(0,6).map(x=>`<div class="e">❗ STEP${x.step||''} ${x.title||x}</div>`),...ws.slice(0,6).map(x=>`<div class="w">⚠️ STEP${x.step||''} ${x.title||x}</div>`)].join('');q('#generate').disabled=es.length>0||!data.lastName||!helperBase}catch(e){q('#statusTitle').textContent='クラウド再接続中';q('#statusSub').textContent='最新データを再取得します。';q('#statusDot').className='sdot warn';q('#generate').disabled=true}finally{pollBusy=false}}
+async function helperFetch(path,opt={}){if(!helperBase)throw new Error('PDFヘルパーがまだ起動していません');try{return await fetch(helperBase+path,opt)}catch(e){helperBase='';setHelper('','PDFヘルパーを再接続しています…','ローカル処理を再検出します。');setTimeout(findHelper,100);throw e}}
+async function monitorPdf(){try{const r=await helperFetch('/api/generate-status',{cache:'no-store'});const d=await r.json();if(!r.ok)throw new Error(d.message||'状態取得失敗');if(d.state==='done'){clearInterval(pdfTimer);pdfTimer=null;setMsg('✅ '+(d.step||'PDF作成完了')+' - '+(d.message||'完成PDFを開きました。'),'done');setTimeout(poll,500);return}if(d.state==='error'){clearInterval(pdfTimer);pdfTimer=null;setMsg('❌ '+(d.step||'PDF作成エラー')+'：'+(d.message||'不明なエラー'),'error');q('#generate').disabled=false;return}const elapsed=Math.round((Date.now()-pdfStarted)/1000);setMsg(`⏳ ${d.step||'PDF作成中'}${d.message?' - '+d.message:''} （${elapsed}秒）`)}catch(e){const elapsed=Math.round((Date.now()-pdfStarted)/1000);setMsg('PDF作成状態を確認しています… '+elapsed+'秒')}}
 q('#generate').onclick=async()=>{q('#generate').disabled=true;setMsg('⏳ 申請データを準備しています…');try{const r=await helperFetch('/api/generate',{method:'POST'});const d=await r.json();if(!r.ok)throw new Error(d.message||'作成失敗');pdfStarted=Date.now();if(pdfTimer)clearInterval(pdfTimer);await monitorPdf();pdfTimer=setInterval(monitorPdf,1000)}catch(e){setMsg('❌ エラー：'+e.message,'error');q('#generate').disabled=false}};
 q('#refresh').onclick=()=>{if(helperBase)poll();else findHelper()};
 q('#newSession').onclick=async()=>{if(!confirm('現在の同期を切り替えて、新しい申請を開始しますか？'))return;try{const r=await helperFetch('/api/new',{method:'POST'});const d=await r.json();if(!r.ok)throw new Error(d.message||'作成できませんでした');helperBase='';sid='';token='';cloudUrl='';q('#qr').textContent='同期情報を更新中…';setTimeout(findHelper,300)}catch(e){alert(e.message)}};
-
-findHelper();setInterval(()=>{if(!helperBase)findHelper();else poll()},3000);
+if(!instance){setHelper('err','起動情報がありません','START_TOM.batから起動してください。')}else{findHelper();setInterval(()=>{if(!helperBase)findHelper();else poll()},3000)}
 </script></body></html>
