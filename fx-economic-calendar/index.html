@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#102c70">
+<meta name="description" content="TOM FX 経済指標カレンダー。GoogleカレンダーなどからURLで購読できます。">
+<title>TOM FX 経済指標カレンダー</title>
+<style>
+:root{color-scheme:light;font-family:system-ui,-apple-system,"Noto Sans JP","Hiragino Kaku Gothic ProN",sans-serif;--deep:#0b1b41;--blue:#1d63e9;--line:#d9e5fa;--muted:#60718d}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(145deg,#e6f1ff 0,#f6f9ff 50%,#fff 100%);color:#132744;min-height:100vh}.container{width:min(960px,calc(100% - 32px));margin:auto}header{background:linear-gradient(135deg,#091936,#1643a2 65%,#2393ed);color:#fff;padding:56px 0 58px}h1{margin:10px 0 8px;font-size:clamp(1.7rem,5vw,2.55rem);letter-spacing:.015em}header p{margin:0;color:#deebff}.tag{font-weight:800;letter-spacing:.16em;color:#95cbff;font-size:.82rem}main{margin-top:-26px;padding-bottom:64px}.panel{background:#fff;border:1px solid var(--line);border-radius:18px;padding:24px;margin-bottom:17px;box-shadow:0 10px 35px #144b9511}.panel h2{font-size:1.15rem;margin:0 0 13px}.button{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:10px;padding:13px 19px;text-decoration:none;font-size:1rem;font-weight:750;cursor:pointer;min-height:46px;background:var(--blue);color:white}.button:hover{filter:brightness(1.07)}.button.secondary{background:#edf4ff;color:#19458b}.buttons{display:flex;gap:9px;flex-wrap:wrap;margin:16px 0}.feed{display:block;border:1px solid var(--line);background:#f4f8ff;padding:13px;border-radius:10px;overflow-wrap:anywhere;font-size:.82rem;color:#173c87;line-height:1.65}p,li{line-height:1.78}.muted{color:var(--muted)}ol{padding-left:1.5rem;margin-bottom:5px}.event{display:flex;align-items:center;gap:16px;padding:13px 0;border-bottom:1px solid #edf1f7}.event:last-child{border-bottom:0}.event .date{min-width:102px;color:#215dba;font-size:.86rem;font-variant-numeric:tabular-nums;font-weight:800}.event .summary{font-weight:650}.small{font-size:.85rem}.pill{display:inline-block;border-radius:999px;background:#dfeaff;color:#144c9f;padding:5px 12px;font-size:.82rem;font-weight:800}footer{padding:0 0 28px;text-align:center;color:#687998;font-size:.82rem}@media(max-width:560px){header{padding:42px 0 55px}.panel{padding:19px}.event{align-items:flex-start;gap:8px}.event .date{min-width:93px}.button{width:100%}}
+</style>
+</head>
+<body>
+<header><div class="container"><div class="tag">TOM ZEROICHI FX LAB</div><h1>FX 経済指標カレンダー</h1><p>日本時間（JST）で配信する購読型の経済指標スケジュール</p></div></header>
+<main class="container">
+<section class="panel">
+<div class="pill">URL購読対応</div>
+<h2 style="margin-top:13px">Googleカレンダーに追加</h2>
+<p>一度URLを登録すると、今後この配信ファイルに新しい指標が追加された際、Googleカレンダー側の更新周期に応じて反映されます。</p>
+<div class="buttons"><button class="button" id="copy">購読URLをコピー</button><a class="button secondary" href="https://calendar.google.com/calendar/u/0/r/settings/addbyurl" target="_blank" rel="noopener noreferrer">Googleカレンダーの登録画面</a><a class="button secondary" href="./calendar.ics">ICSファイルを開く</a></div>
+<code class="feed" id="url">https://tomzeroichi.github.io/tom-toolportal/fx-economic-calendar/calendar.ics</code>
+<p class="small muted">①購読URLをコピー → ②Googleカレンダーの［他のカレンダー］＋ → ［URLで追加］ → ③貼り付けて追加。AndroidのGoogleカレンダーアプリには「URLで追加」がないため、パソコンのブラウザから設定してください。</p>
+</section>
+<section class="panel"><h2>掲載指標</h2><p class="muted small">提供された2026年10月の23件を収録。日時の公式照合はしていません。各予定に15分前アラーム情報を入れていますが、GoogleのURL購読では通知が反映されない場合があります。</p><div id="list" aria-live="polite"><p class="muted">指標を読み込み中…</p></div></section>
+<section class="panel"><h2>更新とご利用上の注意</h2><p>この配信は経済指標の確認用です。発表延期・時刻変更・サマータイム等によるズレを避けるため、実際の取引前には各発表機関の最新情報を確認してください。GoogleカレンダーのURL購読は即時同期ではありません。</p><p class="small muted">カレンダーのURLを変更せず、ファイルの内容を更新する運用です。現在、翌月以降の指標を自動取得する処理はありません。</p></section>
+</main>
+<footer>© TOM ZEROICHI FX LAB / TOM FX 経済指標カレンダー</footer>
+<script>
+(()=>{
+const link="https://tomzeroichi.github.io/tom-toolportal/fx-economic-calendar/calendar.ics";
+const el=document.getElementById('copy');
+el.addEventListener('click',async()=>{
+ try{await navigator.clipboard.writeText(link);el.textContent='コピーしました ✓';setTimeout(()=>el.textContent='購読URLをコピー',1800)}
+ catch(e){prompt('このURLをコピーしてください',link)}
+});
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+fetch('./calendar.ics',{cache:'no-cache'}).then(r=>{if(!r.ok)throw Error(r.status);return r.text()}).then(txt=>{
+ const lines=txt.replace(/\r\n[ \t]/g,'').split(/\r?\n/);
+ const events=[];let ev=null;
+ for(const line of lines){
+ if(line==='BEGIN:VEVENT'){ev={};continue}
+ if(line==='END:VEVENT'){if(ev)events.push(ev);ev=null;continue}
+ if(!ev)continue;
+ if(line.startsWith('DTSTART'))ev.start=line.split(':').slice(1).join(':');
+ if(line.startsWith('SUMMARY:'))ev.title=line.slice(8).replace(/\\,/g,',');
+ }
+ const sorted=events.sort((a,b)=>(a.start||'').localeCompare(b.start||''));
+ document.getElementById('list').innerHTML=sorted.map(e=>{
+ let d=(e.start||'').match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})/);
+ const date=d?d[2]+'/'+d[3]+' '+d[4]+':'+d[5]:'日時未設定';
+ return '<div class="event"><div class="date">'+esc(date)+'</div><div class="summary">'+esc((e.title||'').replace('【FX指標】',''))+'</div></div>';
+ }).join('') || '<p class="muted">登録済みの予定はありません。</p>';
+}).catch(()=>document.getElementById('list').innerHTML='<p class="muted">予定の一覧を読み込めませんでした。ICSファイルを確認してください。</p>');
+})();
+</script>
+</body>
+</html>
